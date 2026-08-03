@@ -42,3 +42,18 @@ pytest
 docker compose run --rm api alembic revision --autogenerate -m "create initial tables"
 docker compose run --rm api alembic upgrade head
 ```
+
+## Sprint 3 features
+
+- JWT authentication (`register`, `login`, `me`)
+- Candidate profile create/update and retrieval
+- Job preference create/update and retrieval
+- Secure PDF/DOCX CV upload and listing
+- Database migration for users, profiles, preferences and CV metadata
+
+Run migrations with:
+
+```bash
+cd backend
+alembic upgrade head
+```

@@ -1,4 +1,5 @@
 from functools import lru_cache
+from pathlib import Path
 from typing import Literal
 
 from pydantic import Field
@@ -16,6 +17,11 @@ class Settings(BaseSettings):
         default="postgresql+asyncpg://falcon:falcon@db:5432/falcon"
     )
     log_level: str = "INFO"
+    jwt_secret_key: str = "change-this-secret-in-production"
+    jwt_algorithm: str = "HS256"
+    access_token_minutes: int = 60
+    cv_storage_path: Path = Path("backend/app/storage/cvs")
+    max_cv_size_mb: int = 10
 
     model_config = SettingsConfigDict(
         env_file=".env",
