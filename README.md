@@ -1,60 +1,44 @@
-﻿# Falcon AI Job Hunter
+# Falcon AI Job Hunter — Sprint 2 Backend Foundation
 
-An AI-powered job hunting platform that automates job discovery, matching, and application workflows.
+This package adds the first working backend foundation for Falcon.
 
-## Project Structure
+## Included
 
+- FastAPI application
+- Environment-based configuration
+- Structured JSON logging
+- Async SQLAlchemy setup
+- PostgreSQL Docker service
+- Alembic migration configuration
+- Candidate, Job, and Application models
+- Health-check and root endpoints
+- Async API tests
+
+## Run with Docker
+
+```bash
+copy .env.example .env
+docker compose up --build
 ```
-falcon-ai-job-hunter/
-├── backend/          # Python 3.12 FastAPI backend
-│   └── app/
-│       ├── api/      # HTTP route handlers
-│       ├── core/     # Configuration and shared settings
-│       ├── database/ # Database connection and session management
-│       ├── models/   # Data models and schemas
-│       ├── services/ # Business service layer
-│       ├── agents/   # AI agent implementations
-│       └── utils/    # Shared utilities
-├── frontend/         # Frontend application (placeholder)
-├── tests/            # Test suite
-├── docs/             # Project documentation
-├── docker/           # Docker configuration files
-└── scripts/          # Utility and deployment scripts
+
+Open:
+
+- API docs: http://localhost:8000/docs
+- Health: http://localhost:8000/api/v1/health
+
+## Run tests locally
+
+```bash
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
+$env:PYTHONPATH="backend"
+pytest
 ```
 
-## Requirements
+## Create the first migration
 
-- Python 3.12
-- Docker & Docker Compose (optional, for containerized development)
-
-## Getting Started
-
-1. Copy the environment template:
-
-   ```bash
-   cp .env.example .env
-   ```
-
-2. Create and activate a virtual environment:
-
-   ```bash
-   python -m venv .venv
-   source .venv/bin/activate  # Linux/macOS
-   .venv\Scripts\activate     # Windows
-   ```
-
-3. Install dependencies:
-
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-4. Start services with Docker Compose (when configured):
-
-   ```bash
-   docker compose up --build
-   ```
-
-## Status
-
-Initial project scaffold — business logic not yet implemented.
+```bash
+docker compose run --rm api alembic revision --autogenerate -m "create initial tables"
+docker compose run --rm api alembic upgrade head
+```
