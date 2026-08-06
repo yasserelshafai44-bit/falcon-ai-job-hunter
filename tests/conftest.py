@@ -1,4 +1,4 @@
-import os
+﻿import os
 from pathlib import Path
 
 os.environ["APP_ENV"] = "test"
@@ -44,3 +44,4 @@ async def client() -> AsyncClient:
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as test_client:
         yield test_client
+
