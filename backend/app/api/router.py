@@ -1,4 +1,6 @@
-from fastapi import APIRouter
+﻿from fastapi import APIRouter
+
+from app.api.routes.applications import router as applications_router
 
 from app.api.routes.auth import router as auth_router
 from app.api.routes.cvs import router as cvs_router
@@ -12,3 +14,5 @@ api_router.include_router(auth_router)
 api_router.include_router(profile_router)
 api_router.include_router(preferences_router)
 api_router.include_router(cvs_router)
+api_router.include_router(applications_router)
+
