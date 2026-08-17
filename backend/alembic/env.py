@@ -42,7 +42,8 @@ async def run_async_migrations() -> None:
         poolclass=pool.NullPool,
     )
 
-    async with connectable.connect() as connection:
+    # Use a transactional connection so successful migrations are committed.
+    async with connectable.begin() as connection:
         await connection.run_sync(
             lambda sync_connection: context.configure(
                 connection=sync_connection,
