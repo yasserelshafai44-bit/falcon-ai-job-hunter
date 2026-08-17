@@ -26,10 +26,29 @@ def upgrade() -> None:
         sa.UniqueConstraint("email"),
     )
     op.create_index("ix_users_email", "users", ["email"])
-    op.add_column("candidates", sa.Column("user_id", sa.Integer(), nullable=True))
-    op.add_column("candidates", sa.Column("phone", sa.String(50), nullable=True))
-    op.create_foreign_key("fk_candidates_user_id", "candidates", "users", ["user_id"], ["id"])
-    op.create_unique_constraint("uq_candidates_user_id", "candidates", ["user_id"])
+
+    # This is the base migration, so a fresh database does not yet have the
+    # candidates table. Create it in the shape expected by the Candidate model
+    # instead of attempting to alter a non-existent legacy table.
+    op.create_table(
+        "candidates",
+        sa.Column("id", sa.Integer(), primary_key=True),
+        sa.Column("user_id", sa.Integer(), sa.ForeignKey("users.id"), nullable=False),
+        sa.Column("full_name", sa.String(200), nullable=False),
+        sa.Column("email", sa.String(320), nullable=False),
+        sa.Column("phone", sa.String(50), nullable=True),
+        sa.Column("location", sa.String(255), nullable=True),
+        sa.Column("years_experience", sa.Integer(), nullable=False, server_default="0"),
+        sa.Column("right_to_work_uk", sa.Boolean(), nullable=False, server_default=sa.false()),
+        sa.Column("full_uk_driving_licence", sa.Boolean(), nullable=False, server_default=sa.false()),
+        sa.Column("profile_data", sa.JSON(), nullable=False, server_default=sa.text("'{}'")),
+        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
+        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
+        sa.UniqueConstraint("user_id", name="uq_candidates_user_id"),
+        sa.UniqueConstraint("email"),
+    )
+    op.create_index("ix_candidates_email", "candidates", ["email"])
+
     op.create_table(
         "job_preferences",
         sa.Column("id", sa.Integer(), primary_key=True),
@@ -60,9 +79,7 @@ def downgrade() -> None:
     op.drop_index("ix_cv_documents_user_id", table_name="cv_documents")
     op.drop_table("cv_documents")
     op.drop_table("job_preferences")
-    op.drop_constraint("uq_candidates_user_id", "candidates", type_="unique")
-    op.drop_constraint("fk_candidates_user_id", "candidates", type_="foreignkey")
-    op.drop_column("candidates", "phone")
-    op.drop_column("candidates", "user_id")
+    op.drop_index("ix_candidates_email", table_name="candidates")
+    op.drop_table("candidates")
     op.drop_index("ix_users_email", table_name="users")
     op.drop_table("users")
