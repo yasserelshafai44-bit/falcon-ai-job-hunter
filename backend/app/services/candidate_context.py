@@ -23,6 +23,8 @@ async def enrich_analysis_with_profile(
         context["profile_full_name"] = candidate.full_name
         context["profile_location"] = candidate.location
         context["profile_years_experience"] = candidate.years_experience
+        context["right_to_work_uk"] = candidate.right_to_work_uk
+        context["full_uk_driving_licence"] = candidate.full_uk_driving_licence
         context["accepted_profile_enrichment"] = candidate.profile_data.get(
             "accepted_cv_enrichment", {}
         )

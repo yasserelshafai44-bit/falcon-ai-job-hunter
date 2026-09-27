@@ -9,6 +9,12 @@ from typing import Any
 
 from app.job_providers.location import normalize_location
 from app.schemas.job_matching import MatchEvidence, MatchRecommendation, MatchScore
+from app.services.career_evidence import (
+    extract_remit,
+    normalized,
+    required_years,
+    role_description,
+)
 from app.services.operational_scope import assess_operational_scope
 
 _TOKEN_RE = re.compile(r"[a-zA-Z][a-zA-Z0-9&+\-/]{2,}")
@@ -54,6 +60,18 @@ _WEIGHTS = {
 }
 _RESPONSIBILITIES = (
     (
+        "Contact-centre operations",
+        (
+            "call-centre",
+            "call centre",
+            "contact centre",
+            "contact-center",
+            "agent performance",
+            "service queues",
+            "backlog reduction",
+        ),
+    ),
+    (
         "Multi-site operations",
         (
             "multi-site",
@@ -61,8 +79,6 @@ _RESPONSIBILITIES = (
             "multi-unit",
             "multiple sites",
             "portfolio of sites",
-            "portfolio",
-            "estate",
             "region of",
             "group of restaurants",
             "regional operations",
@@ -73,10 +89,10 @@ _RESPONSIBILITIES = (
         (
             "p&l",
             "profit and loss",
+            "ebitdar",
             "full pnl",
             "commercial ownership",
             "commercial accountability",
-            "profitability",
             "own profit",
         ),
     ),
@@ -107,6 +123,9 @@ _RESPONSIBILITIES = (
             "lead managers",
             "lead regional",
             "people development",
+            "develop your teams",
+            "growing your gms",
+            "managing and developing",
             "succession",
         ),
     ),
@@ -400,8 +419,6 @@ def _candidate_items(analysis: dict[str, Any]) -> list[dict[str, str]]:
         item = analysis.get(field)
         if item:
             result.append({"value": _value(item), "source": _source(item)})
-    for value in analysis.get("career_tracks", []) or []:
-        result.append({"value": str(value), "source": str(value)})
     for line in re.split(r"[\r\n]+", str(analysis.get("source_text") or "")):
         if line.strip():
             result.append({"value": line.strip(), "source": line.strip()})
@@ -467,6 +484,11 @@ def _explicit_general_manager_scope(title: str, description: str) -> bool:
 
 def _role_family(title: str, description: str) -> str:
     folded = title.casefold()
+    # Merchant/partner support is not ownership of the partner restaurants.
+    if re.search(r"partner|merchant|support", folded) and re.search(
+        r"(?:channel|queue|agent|contact.centre|call.centre)", description, re.I
+    ):
+        return "customer_operations"
     for family, patterns in _SPECIALIST_ROLES:
         if any(pattern in folded for pattern in patterns):
             return family
@@ -538,7 +560,9 @@ def classify_occupational_family(title: str, description: str) -> str:
 
 def assess_job_seniority(title: str, description: str) -> str:
     """Return a stable human-readable vacancy seniority band."""
-    level = _seniority(title) or _seniority(description)
+    level = _seniority(title)
+    if level == 3 and extract_remit(role_description(description)).multisite:
+        level = 4
     return {
         6: "executive",
         5: "director_head",
@@ -563,10 +587,42 @@ def _mandatory(description: str) -> list[str]:
             value = re.sub(r"\s+", " ", match.group(1)).strip(" :-")
             if value and value.casefold() not in {item.casefold() for item in values}:
                 values.append(value)
-    return values[:10]
+    text = normalized(description)
+    for pattern, label in (
+        (
+            r"(?:must (?:have|hold)|possess|requires?|essential)[^.\n]{0,35}(?:driver's|driving) licen[cs]e",
+            "Valid driving licence",
+        ),
+        (r"must hold[^.\n]{0,20}right to work", "Valid right to work"),
+        (
+            r"(?:knowledgeable|experience|proficien\w*)[^.\n]{0,25}CRM systems?",
+            "CRM systems experience",
+        ),
+        (
+            r"previous catering and operational management experience is essential",
+            "Catering management experience",
+        ),
+    ):
+        if re.search(pattern, text, re.I):
+            values.append(label)
+    return list(dict.fromkeys(values))[:10]
 
 
 def _requirement_supported(requirement: str, candidate_text: str) -> bool:
+    if requirement == "Valid driving licence":
+        return bool(
+            re.search(
+                r"(?:full|valid|uk|driver's)\s+(?:uk\s+)?(?:driving |driver's )?licen[cs]e",
+                candidate_text,
+                re.I,
+            )
+        )
+    if requirement == "Valid right to work":
+        return "right to work" in candidate_text
+    if requirement == "CRM systems experience":
+        return bool(re.search(r"\b(?:crm|zendesk|salesforce)\b", candidate_text, re.I))
+    if requirement == "Catering management experience":
+        return bool(re.search(r"\b(?:catering|caterer)\b", candidate_text, re.I))
     required, candidate = _tokens(requirement), _tokens(candidate_text)
     specialist = required - {
         "qualification",
@@ -576,7 +632,7 @@ def _requirement_supported(requirement: str, candidate_text: str) -> bool:
         "degree",
     }
     compared = specialist or required
-    return bool(compared) and len(compared & candidate) / len(compared) >= 0.5
+    return bool(compared) and compared <= candidate
 
 
 def _recommendation(
@@ -599,7 +655,14 @@ def score_candidate_against_job(
     """Score eight independent suitability dimensions using traceable evidence."""
     items = _candidate_items(candidate_analysis)
     candidate_text = " ".join(f"{x['value']} {x['source']}" for x in items).casefold()
-    job_text = " ".join((job.title, job.description, *job.requirements)).casefold()
+    if candidate_analysis.get("right_to_work_uk") is True:
+        candidate_text += " valid right to work in the UK."
+    if candidate_analysis.get("full_uk_driving_licence") is True:
+        candidate_text += " full UK driving licence."
+    candidate_remit = extract_remit(candidate_text)
+    responsibility_text = role_description(job.description)
+    job_remit = extract_remit(responsibility_text)
+    job_text = " ".join((job.title, responsibility_text)).casefold()
     evidence: list[MatchEvidence] = []
 
     family = _role_family(job.title, job.description)
@@ -655,13 +718,25 @@ def score_candidate_against_job(
     )
     if family == "operations_leadership" and candidate_operations:
         role = (
-            25,
+            25 if job_remit.multisite else 23 if job_remit.delivery else 18,
             "matched",
-            "Operational leadership role aligns with the candidate's regional/multi-site operations evidence",
+            "Role remit aligns with evidenced multi-site operations"
+            if job_remit.multisite
+            else "Delivery-network operations align with candidate operations experience"
+            if job_remit.delivery
+            else "Functional operations are transferable; regional restaurant responsibility is NOT STATED",
         )
     elif family in adjacent_families | {"general_leadership"} and candidate_operations:
         role = (
-            15 if family != "retail_site" else 12,
+            18
+            if family == "customer_operations"
+            and _contains(
+                candidate_text,
+                ("call-centre", "call centre", "contact centre", "contact-center"),
+            )
+            else 15
+            if family != "retail_site"
+            else 12,
             "mismatched",
             f"{family.replace('_', ' ').title()} is adjacent, but not equivalent to senior multi-site operations leadership",
         )
@@ -685,8 +760,14 @@ def score_candidate_against_job(
         )
     evidence.append(_component("role_family", *role, role_sources))
 
-    candidate_level = _seniority(candidate_text, candidate=True)
-    job_level = _seniority(job.title) or _seniority(job.description)
+    candidate_level = (
+        _seniority(_value(candidate_analysis.get("role_family")), candidate=True)
+        or _seniority(_value(candidate_analysis.get("seniority")), candidate=True)
+        or _seniority(candidate_text, candidate=True)
+    )
+    job_level = _seniority(job.title)
+    if job_remit.multisite and job_level == 3:
+        job_level = 4
     if not job_level:
         seniority = (
             0,
@@ -699,11 +780,17 @@ def score_candidate_against_job(
             "unknown",
             "Candidate seniority could not be confirmed from accepted CV/profile evidence",
         )
-    elif abs(candidate_level - job_level) <= 1:
+    elif candidate_level == job_level:
         seniority = (
             15,
             "matched",
             "Vacancy seniority is consistent with the candidate's evidenced leadership level",
+        )
+    elif abs(candidate_level - job_level) == 1:
+        seniority = (
+            12,
+            "matched",
+            "Vacancy is one leadership level from the candidate's evidenced seniority",
         )
     elif abs(candidate_level - job_level) == 2:
         seniority = (
@@ -730,9 +817,14 @@ def score_candidate_against_job(
         if _sources(items, aliases)
     ]
     ratio = len(matched) / len(required) if required else 0
+    # One generic responsibility cannot earn the same evidence coverage as a
+    # substantive remit. More synonyms never create additional dimensions.
+    coverage = min(1.0, len(required) / 4)
+    if job_remit.multisite and candidate_remit.multisite:
+        coverage = min(1.0, max(coverage, 0.9))
     if required:
         resp = (
-            25 * ratio,
+            25 * ratio * coverage,
             "matched" if ratio >= 0.7 else "mismatched",
             f"Matched {len(matched)} of {len(required)} substantive responsibilities: "
             + (", ".join(label for label, _ in matched) or "none"),
@@ -757,13 +849,31 @@ def score_candidate_against_job(
         if _contains(candidate_text, aliases)
     }
     job_industries = {
-        name for name, aliases in _INDUSTRIES.items() if _contains(job_text, aliases)
+        name
+        for name, aliases in _INDUSTRIES.items()
+        if _contains(job.description, aliases)
     }
     direct = candidate_industries & job_industries
     adjacent = "retail" in job_industries and bool(
         candidate_industries & {"hospitality/food service", "franchise"}
     )
-    if direct:
+    education_catering = bool(
+        re.search(
+            r"(?:education sector catering|portfolio of schools|school catering)",
+            job.description,
+            re.I,
+        )
+    )
+    if education_catering and not re.search(
+        r"school catering|education catering|contract catering|catering management",
+        candidate_text,
+    ):
+        industry = (
+            6,
+            "mismatched",
+            "Food-service experience transfers, but education/contract-catering experience is NOT STATED in the CV",
+        )
+    elif direct:
         industry = (10, "matched", f"Sector match: {', '.join(sorted(direct))}")
     elif adjacent:
         industry = (
@@ -788,49 +898,69 @@ def score_candidate_against_job(
 
     scope_markers = ("multi-site", "multi site", "multi-unit", "regional", "p&l")
     candidate_scope = _sources(items, scope_markers)
-    if scope_assessment.tier == "senior_multisite_ownership" and candidate_scope:
-        scope = (
-            10,
-            "matched",
-            "Vacancy explicitly states regional/multi-site ownership aligned with the candidate's leadership evidence",
+    scope_points = 0.0
+    scope_details = []
+    scope_unknowns = []
+    for label, vacancy_spans, candidate_spans, points in (
+        (
+            "Multi-site/regional responsibility",
+            job_remit.multisite,
+            candidate_remit.multisite,
+            4,
+        ),
+        ("People leadership", job_remit.people, candidate_remit.people, 2),
+        ("Explicit P&L/financial ownership", job_remit.pnl, candidate_remit.pnl, 2),
+    ):
+        if not vacancy_spans:
+            scope_unknowns.append(f"{label} is NOT STATED for this vacancy")
+        elif candidate_spans:
+            scope_points += points
+            scope_details.append(label + ": " + vacancy_spans[0][:220])
+        else:
+            scope_details.append(
+                label
+                + " is stated in the vacancy but not supported by candidate evidence"
+            )
+    if not job_remit.pnl and job_remit.budget and candidate_remit.budget:
+        scope_points += 1
+        scope_details.append(
+            "Commercial/budget responsibility is supported; this does not establish full P&L ownership"
         )
-    elif family == "retail_site":
-        scope = (
-            2,
-            "mismatched",
-            "Vacancy appears single-site; candidate evidence is senior multi-site/regional leadership",
+    for label, vacancy_count, candidate_count in (
+        ("Site/portfolio count", job_remit.site_count, candidate_remit.site_count),
+        ("Team headcount", job_remit.team_count, candidate_remit.team_count),
+    ):
+        if vacancy_count is None:
+            scope_unknowns.append(f"{label} is NOT STATED for this vacancy")
+        elif candidate_count is None:
+            scope_unknowns.append(
+                f"{label}: vacancy states {vacancy_count}; candidate scale is UNKNOWN"
+            )
+        else:
+            scope_points += min(1.0, candidate_count / vacancy_count)
+            scope_details.append(
+                f"{label}: vacancy {vacancy_count}, candidate evidence {candidate_count}"
+            )
+    scope_status = "matched" if scope_points else "unknown"
+    if family == "retail_site" or (
+        candidate_remit.multisite
+        and not job_remit.multisite
+        and family in adjacent_families
+    ):
+        scope_status = "mismatched"
+        scope_points = min(scope_points, 3)
+        scope_details.append(
+            "Single-site or functional remit is not equivalent to the candidate's regional restaurant portfolio"
         )
-    elif family in adjacent_families:
-        scope = (
-            3,
-            "mismatched",
-            "The role has transferable operating responsibility but no evidenced regional or multi-site leadership scope",
+    evidence.append(
+        _component(
+            "leadership_scope",
+            scope_points,
+            scope_status,
+            "; ".join(scope_details + scope_unknowns),
+            candidate_scope,
         )
-    elif scope_assessment.tier == "operational_leadership":
-        scope = (
-            5,
-            "matched",
-            "Vacancy states substantive operational ownership, but regional/multi-site accountability is not confirmed",
-        )
-    elif scope_assessment.tier == "potential_operations":
-        scope = (
-            0,
-            "unknown",
-            "Operational title is relevant, but measurable leadership, site, geographic, or P&L scope is NOT STATED",
-        )
-    elif scope_assessment.tier == "senior_multisite_ownership":
-        scope = (
-            0,
-            "mismatched",
-            "Vacancy requires multi-site/regional scope not confirmed in candidate evidence",
-        )
-    else:
-        scope = (
-            0,
-            "unknown",
-            "Vacancy does not state measurable site, team, geographic, or P&L scope",
-        )
-    evidence.append(_component("leadership_scope", *scope, candidate_scope))
+    )
 
     preferences = [
         str(x) for x in candidate_analysis.get("preferred_locations", []) if x
@@ -916,7 +1046,7 @@ def score_candidate_against_job(
         or candidate_analysis.get("profile_years_experience"),
         candidate_text,
     )
-    job_years = _years(None, job.description)
+    job_years = required_years(job.description)
     if job_years is None:
         exp = (
             0,
@@ -949,7 +1079,7 @@ def score_candidate_against_job(
         )
     evidence.append(_component("experience", *exp))
 
-    requirements = _mandatory(job.description)
+    requirements = _mandatory("\n".join((job.description, *job.requirements)))
     failures = [
         req for req in requirements if not _requirement_supported(req, candidate_text)
     ]
@@ -962,8 +1092,8 @@ def score_candidate_against_job(
     elif failures:
         mandatory = (
             0,
-            "mismatched",
-            f"Unsupported mandatory requirements: {'; '.join(failures)}",
+            "unknown",
+            f"Candidate evidence is UNKNOWN for mandatory requirements: {'; '.join(failures)}",
         )
     else:
         mandatory = (
@@ -983,7 +1113,7 @@ def score_candidate_against_job(
         for x in evidence
         if x.dimension != "location" and x.status == "mismatched"
     ]
-    uncertainty = [
+    uncertainty = scope_unknowns + [
         x.explanation
         for x in evidence
         if x.dimension != "location" and x.status == "unknown"
@@ -1037,7 +1167,14 @@ def score_candidate_against_job(
             )
         )
     if failures:
-        caps.append((49, "Unsupported mandatory requirements cap the score at 49"))
+        functional_gaps = {"CRM systems experience", "Catering management experience"}
+        cap = 69 if set(failures) <= functional_gaps else 49
+        caps.append(
+            (
+                cap,
+                f"Unconfirmed mandatory requirements require review; score capped at {cap}",
+            )
+        )
     score = min([raw, *(cap for cap, _ in caps)]) if caps else raw
     uncertainty.extend(message for cap, message in caps if raw > cap)
     recommendation = _recommendation(score, unrelated, failures)

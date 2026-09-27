@@ -135,7 +135,8 @@ async def test_manual_official_import_ranks_and_deduplicates_url(
     first = created.json()
     assert first["created"] is True
     assert first["job"]["provider"] == "manual_official"
-    assert first["match"]["career_fit_score"] >= 80
+    assert first["match"]["career_fit_score"] >= 78
+    assert first["match"]["recommendation"] in {"apply", "strong_apply"}
     assert first["match"]["location_fit"] == "good"
 
     payload["description"] += " Travel within Kent is explicitly required."
