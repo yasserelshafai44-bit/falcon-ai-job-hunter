@@ -93,6 +93,8 @@ def assess_operational_scope(
         bool(pattern.search(description)) for pattern in (_PEOPLE, _PNL, _OPERATIONS)
     )
     unrelated = occupational_family in {
+        "culinary",
+        "information_technology",
         "merchandising",
         "estimating",
         "software",

@@ -15,6 +15,7 @@ from app.services.career_evidence import (
     required_years,
     role_description,
 )
+from app.services.occupational_identity import specialist_evidence, specialist_identity
 from app.services.operational_scope import assess_operational_scope
 
 _TOKEN_RE = re.compile(r"[a-zA-Z][a-zA-Z0-9&+\-/]{2,}")
@@ -272,7 +273,7 @@ _SPECIALIST_ROLES = (
             "training manager",
         ),
     ),
-    ("education", ("teacher", "education", "instructor", "academic", "curriculum")),
+    ("education", ("teacher", "instructor", "academic", "curriculum")),
     (
         "administration",
         ("executive assistant", "administrative assistant", "office assistant"),
@@ -484,13 +485,16 @@ def _explicit_general_manager_scope(title: str, description: str) -> bool:
 
 def _role_family(title: str, description: str) -> str:
     folded = title.casefold()
+    specialist = specialist_identity(title, description)
+    if specialist:
+        return specialist
     # Merchant/partner support is not ownership of the partner restaurants.
     if re.search(r"partner|merchant|support", folded) and re.search(
         r"(?:channel|queue|agent|contact.centre|call.centre)", description, re.I
     ):
         return "customer_operations"
     for family, patterns in _SPECIALIST_ROLES:
-        if any(pattern in folded for pattern in patterns):
+        if _contains(folded, patterns):
             return family
     if "general manager" in folded:
         if _explicit_general_manager_scope(title, description):
@@ -503,7 +507,7 @@ def _role_family(title: str, description: str) -> str:
     ):
         return "customer_operations"
     for family, patterns in _ADJACENT_TITLES.items():
-        if any(pattern in folded for pattern in patterns):
+        if _contains(folded, patterns):
             return family
     if re.search(r"\b(?:assistant|coordinator|administrator)\b", folded):
         return "junior_support"
@@ -685,7 +689,12 @@ def score_candidate_against_job(
         )
         >= 2
     )
-    unrelated = family in {
+    specialist_sources = specialist_evidence(
+        candidate_analysis, family, dict(_SPECIALIST_ROLES).get(family, ())
+    )
+    unrelated = not specialist_sources and family in {
+        "culinary",
+        "information_technology",
         "merchandising",
         "estimating",
         "software",
@@ -746,11 +755,14 @@ def score_candidate_against_job(
             "mismatched",
             "Junior support work is below the candidate's operations-leadership occupational scope",
         )
+    elif specialist_sources:
+        role_sources = specialist_sources[:3]
+        role = (25, "matched", f"Explicit CV occupational evidence supports {family}")
     elif unrelated:
         role = (
             0,
             "mismatched",
-            f"Job belongs to the {family} occupational family, not the candidate's operations-leadership family",
+            f"Job requires {family.replace('_', ' ')} occupational experience; explicit CV evidence is UNKNOWN. General management and functional oversight do not establish specialist experience",
         )
     else:
         role = (
@@ -1083,6 +1095,11 @@ def score_candidate_against_job(
     failures = [
         req for req in requirements if not _requirement_supported(req, candidate_text)
     ]
+    if unrelated:
+        requirements.append(
+            f"{family.replace('_', ' ').title()} occupational experience"
+        )
+        failures.append(requirements[-1])
     if not requirements:
         mandatory = (
             0,
