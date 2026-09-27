@@ -1,7 +1,6 @@
+from app.core.production import configure_production_app
 from fastapi import FastAPI, HTTPException
 from fastapi.testclient import TestClient
-
-from app.core.production import configure_production_app
 
 
 def test_http_errors_follow_consistent_contract() -> None:

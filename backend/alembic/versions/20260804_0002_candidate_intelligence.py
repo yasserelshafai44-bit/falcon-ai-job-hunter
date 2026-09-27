@@ -4,10 +4,11 @@ Revision ID: 20260804_0002
 Revises: 20260803_0001
 Create Date: 2026-08-04
 """
+
 from collections.abc import Sequence
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 
 revision: str = "20260804_0002"
 down_revision: str | None = "20260803_0001"
@@ -46,6 +47,7 @@ def upgrade() -> None:
         "ix_candidate_analyses_cv_document_id",
         "candidate_analyses",
         ["cv_document_id"],
+        unique=True,
     )
     op.create_index(
         "ix_candidate_analyses_user_id",

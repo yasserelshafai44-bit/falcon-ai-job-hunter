@@ -14,16 +14,27 @@ router = APIRouter(prefix="/preferences", tags=["job preferences"])
 
 
 @router.get("", response_model=JobPreferenceResponse)
-async def get_preferences(user: Annotated[User, Depends(get_current_user)], session: Annotated[AsyncSession, Depends(get_db_session)]) -> JobPreference:
-    preferences = await session.scalar(select(JobPreference).where(JobPreference.user_id == user.id))
+async def get_preferences(
+    user: Annotated[User, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db_session)],
+) -> JobPreference:
+    preferences = await session.scalar(
+        select(JobPreference).where(JobPreference.user_id == user.id)
+    )
     if preferences is None:
         raise HTTPException(status_code=404, detail="Job preferences not found")
     return preferences
 
 
 @router.put("", response_model=JobPreferenceResponse)
-async def upsert_preferences(payload: JobPreferenceUpsert, user: Annotated[User, Depends(get_current_user)], session: Annotated[AsyncSession, Depends(get_db_session)]) -> JobPreference:
-    preferences = await session.scalar(select(JobPreference).where(JobPreference.user_id == user.id))
+async def upsert_preferences(
+    payload: JobPreferenceUpsert,
+    user: Annotated[User, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db_session)],
+) -> JobPreference:
+    preferences = await session.scalar(
+        select(JobPreference).where(JobPreference.user_id == user.id)
+    )
     values = payload.model_dump()
     if preferences is None:
         preferences = JobPreference(user_id=user.id, **values)

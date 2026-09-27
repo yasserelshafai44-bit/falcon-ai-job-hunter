@@ -1,1 +1,1 @@
-﻿"""Shared utility functions — implementation pending."""
+"""Shared utility functions — implementation pending."""

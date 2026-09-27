@@ -1,1 +1,1 @@
-﻿"""AI agent implementations — implementation pending."""
+"""AI agent implementations — implementation pending."""

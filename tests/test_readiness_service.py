@@ -1,6 +1,4 @@
 import pytest
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from app.services.readiness_service import check_readiness
 
 

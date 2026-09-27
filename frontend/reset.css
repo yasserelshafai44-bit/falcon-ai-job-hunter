@@ -1,0 +1,73 @@
+.reset {
+  background: transparent;
+  border: 1px solid #9eaaa2;
+  color: #28614d;
+}
+
+.hint {
+  color: #68716c;
+}
+
+.error {
+  border-color: #b42318;
+  color: #8a1c13;
+}
+
+.prepare-status {
+  margin-top: 10px;
+  min-height: 20px;
+  color: #5b665f;
+  font-size: 14px;
+}
+
+.success {
+  color: #28614d;
+}
+
+.error-text {
+  color: #b42318;
+}
+
+.application-review .company {
+  font-weight: 700;
+}
+
+.review-details {
+  margin-top: 16px;
+}
+
+.review-details > summary {
+  color: #28614d;
+  cursor: pointer;
+  font-weight: 800;
+  padding: 10px 0;
+}
+
+.review-details section {
+  border-top: 1px solid #d7d9d0;
+  padding: 16px 0;
+}
+
+.source-evidence {
+  background: #edf0e9;
+  border-radius: 8px;
+  padding: 16px !important;
+}
+.suggestions{margin-top:18px;padding:14px;border:1px solid #aebcae;border-radius:10px;background:#eef5ea}.suggestions label{display:block;margin:8px 0;font-weight:400}.suggestions input{width:auto;margin:0 7px 0 0}.suggestions button{margin-top:8px}#analysis>section{border-top:1px solid #ddd;padding-top:8px}#analysis h4{margin-bottom:4px}
+
+.document-content {
+  min-height: 300px;
+  width: 100%;
+  margin-bottom: 10px;
+  padding: 14px;
+  resize: vertical;
+  font: 14px/1.55 ui-monospace, monospace;
+}
+
+.review-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding-top: 12px;
+}

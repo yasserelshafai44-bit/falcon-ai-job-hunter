@@ -14,3 +14,7 @@ htmlcov/
 backend/app/storage/cvs/*
 !backend/app/storage/cvs/.gitkeep
 tests/.test-cvs/
+
+# Local database backups and private application verification reports
+/.falcon-beta/
+/backend/backend/

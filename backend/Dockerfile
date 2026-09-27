@@ -9,6 +9,7 @@ COPY requirements.txt /tmp/requirements.txt
 RUN pip install --no-cache-dir -r /tmp/requirements.txt
 
 COPY backend /app
+COPY frontend /app/frontend
 
 EXPOSE 8000
 

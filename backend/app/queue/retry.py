@@ -1,4 +1,4 @@
-﻿class RetryPolicy:
+class RetryPolicy:
     def __init__(
         self,
         max_attempts: int = 3,
@@ -27,7 +27,5 @@
         if attempt < 1:
             raise ValueError("attempt must be at least 1")
 
-        delay = self.base_delay_seconds * (
-            self.multiplier ** (attempt - 1)
-        )
+        delay = self.base_delay_seconds * (self.multiplier ** (attempt - 1))
         return min(delay, self.max_delay_seconds)

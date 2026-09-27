@@ -5,6 +5,7 @@ from app.models.candidate_analysis import CandidateAnalysis
 from app.models.discovered_job import DiscoveredJob
 from app.models.job_match import JobMatch
 from app.schemas.job_matching import JobMatchRead
+from app.services.candidate_context import enrich_analysis_with_profile
 from app.services.match_scoring import JobInput, score_candidate_against_job
 
 
@@ -19,7 +20,12 @@ def to_match_read(record: JobMatch) -> JobMatchRead:
         candidate_analysis_id=record.candidate_analysis_id,
         job_id=record.job_id,
         overall_score=record.overall_score,
+        career_fit_score=record.overall_score,
+        location_fit=_location_value(record.evidence, "status"),
+        location_fit_explanation=_location_value(record.evidence, "explanation"),
         recommendation=record.recommendation,
+        occupational_family=record.occupational_family,
+        seniority_assessment=record.seniority_assessment,
         strengths=record.strengths,
         gaps=record.gaps,
         mandatory_failures=record.mandatory_failures,
@@ -30,6 +36,20 @@ def to_match_read(record: JobMatch) -> JobMatchRead:
         created_at=record.created_at,
         updated_at=record.updated_at,
     )
+
+
+def _location_value(evidence: list[dict], field: str) -> str:
+    location = next(
+        (item for item in evidence if item.get("dimension") == "location"), None
+    )
+    if location is None:
+        return "unknown" if field == "status" else "Location has not been assessed"
+    value = str(location.get(field) or "")
+    if field == "status":
+        return {"matched": "good", "mismatched": "outside_preference"}.get(
+            value, "unknown"
+        )
+    return value or "Location has not been assessed"
 
 
 async def calculate_and_persist_match(
@@ -52,14 +72,21 @@ async def calculate_and_persist_match(
     if job is None:
         raise MatchingInputError("Job not found")
 
+    candidate_evidence = dict(analysis.analysis_data)
+    candidate_evidence["source_text"] = analysis.extracted_text
+    candidate_evidence = await enrich_analysis_with_profile(
+        session, user_id, candidate_evidence
+    )
     score = score_candidate_against_job(
-        candidate_analysis=analysis.analysis_data,
+        candidate_analysis=candidate_evidence,
         job=JobInput(
             title=job.title,
             company=job.company,
             location=job.location,
             description=job.description,
             remote=job.remote,
+            workplace_type=job.workplace_type,
+            requirements=tuple(job.requirements or []),
             salary_min=job.salary_min,
             salary_max=job.salary_max,
             currency=job.currency,
@@ -75,6 +102,9 @@ async def calculate_and_persist_match(
     )
     payload = score.model_dump(mode="json")
     evidence = payload.pop("evidence")
+    payload.pop("career_fit_score")
+    payload.pop("location_fit")
+    payload.pop("location_fit_explanation")
 
     if record is None:
         record = JobMatch(
@@ -100,9 +130,14 @@ async def list_matches(
     session: AsyncSession,
     user_id: int,
 ) -> tuple[list[JobMatchRead], int]:
-    total = await session.scalar(
-        select(func.count()).select_from(JobMatch).where(JobMatch.user_id == user_id)
-    ) or 0
+    total = (
+        await session.scalar(
+            select(func.count())
+            .select_from(JobMatch)
+            .where(JobMatch.user_id == user_id)
+        )
+        or 0
+    )
     rows = await session.scalars(
         select(JobMatch)
         .where(JobMatch.user_id == user_id)

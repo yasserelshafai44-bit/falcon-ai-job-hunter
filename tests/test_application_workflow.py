@@ -1,10 +1,45 @@
 import pytest
-
+from app.models.discovered_job import DiscoveredJob
 from app.schemas.application_workflow import ApplicationWorkflowStatus
 from app.services.application_workflow import (
-    ApplicationWorkflowError,
     can_transition,
+    employer_question_state,
 )
+
+
+@pytest.mark.parametrize(
+    "sources,url,expected",
+    [
+        ([], "https://example.com/job", "unknown"),
+        ([{"application_questions": []}], "https://example.com/job", "unknown"),
+        (
+            [{"application_questions": ["Right to work?"]}],
+            "https://example.com/job",
+            "retrieved",
+        ),
+        (
+            [{"application_questions_status": "none_required"}],
+            "https://example.com/job",
+            "none_required",
+        ),
+        (
+            [{"application_questions_status": "unavailable"}],
+            "https://example.com/job",
+            "unavailable",
+        ),
+        (
+            [],
+            "https://jobs.smartrecruiters.com/RaisingCanes/123",
+            "requires_employer_site",
+        ),
+    ],
+)
+def test_employer_questions_distinguish_unknown_from_unanswered(sources, url, expected):
+    status, note = employer_question_state(
+        DiscoveredJob(source_records=sources, url=url)
+    )
+    assert status == expected
+    assert note
 
 
 def test_application_workflow_happy_path_transitions() -> None:

@@ -1,7 +1,6 @@
 """Tests for background task domain models."""
 
 import pytest
-
 from app.core.background import BackgroundTask, RetryPolicy, TaskStatus
 
 

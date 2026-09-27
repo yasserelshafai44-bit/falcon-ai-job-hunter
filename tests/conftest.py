@@ -1,4 +1,4 @@
-﻿import os
+import os
 from pathlib import Path
 
 os.environ["APP_ENV"] = "test"
@@ -7,13 +7,12 @@ os.environ["JWT_SECRET_KEY"] = "test-secret"
 os.environ["CV_STORAGE_PATH"] = str(Path(__file__).parent / ".test-cvs")
 
 import pytest
-from httpx import ASGITransport, AsyncClient
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-from sqlalchemy.pool import StaticPool
-
 from app.database.base import Base
 from app.database.session import get_db_session
 from app.main import app
+from httpx import ASGITransport, AsyncClient
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from sqlalchemy.pool import StaticPool
 
 engine = create_async_engine(
     "sqlite+aiosqlite:///:memory:",
@@ -44,4 +43,3 @@ async def client() -> AsyncClient:
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as test_client:
         yield test_client
-

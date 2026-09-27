@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import logging
 
-from app.core.background import BackgroundTask, RetryPolicy, TaskStatus
+from app.core.background import BackgroundTask, RetryPolicy
 from app.core.task_queue import InMemoryTaskQueue
 from app.workers.base_worker import BaseWorker
 

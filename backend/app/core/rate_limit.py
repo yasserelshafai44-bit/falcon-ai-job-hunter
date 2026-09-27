@@ -4,7 +4,6 @@ import asyncio
 from collections import defaultdict, deque
 from dataclasses import dataclass
 from time import monotonic
-from typing import Deque
 
 from fastapi import HTTPException, Request, status
 
@@ -22,7 +21,7 @@ class InMemoryRateLimiter:
     """
 
     def __init__(self) -> None:
-        self._buckets: dict[str, Deque[float]] = defaultdict(deque)
+        self._buckets: dict[str, deque[float]] = defaultdict(deque)
         self._lock = asyncio.Lock()
 
     async def check(self, *, key: str, rule: RateLimitRule) -> int:

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+
 from fastapi import FastAPI
 
 from app.core.errors import register_exception_handlers

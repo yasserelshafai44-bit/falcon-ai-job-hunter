@@ -1,7 +1,6 @@
 from datetime import UTC, datetime
 
 import pytest
-
 from app.core.task_queue import InMemoryTaskQueue
 from app.jobs.cron import IntervalSchedule
 from app.jobs.dispatcher import JobDispatcher

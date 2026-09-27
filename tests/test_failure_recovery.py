@@ -1,5 +1,4 @@
 import pytest
-
 from app.services.failure_recovery import FailureRecovery
 from app.services.job_state import JobState
 

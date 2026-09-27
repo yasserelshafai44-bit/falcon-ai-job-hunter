@@ -1,7 +1,6 @@
 from types import SimpleNamespace
 
 import pytest
-
 from app.services import job_hunt_orchestrator as module
 
 

@@ -1,7 +1,6 @@
 from datetime import UTC, datetime, timedelta
 
 import pytest
-
 from app.jobs.cron import IntervalSchedule
 from app.jobs.job_registry import JobNotFoundError, JobRegistry, ScheduledJob
 

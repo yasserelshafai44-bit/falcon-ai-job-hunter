@@ -31,8 +31,6 @@ class Scheduler:
         tasks: list[BackgroundTask] = []
 
         for job in self.registry.due(current):
-            tasks.append(
-                await self.dispatcher.dispatch(job, occurred_at=current)
-            )
+            tasks.append(await self.dispatcher.dispatch(job, occurred_at=current))
 
         return tasks

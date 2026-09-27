@@ -1,6 +1,14 @@
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, UniqueConstraint, func
+from sqlalchemy import (
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+    func,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database.base import Base
@@ -37,9 +45,17 @@ class ApplicationWorkflow(Base):
         nullable=True,
     )
     status: Mapped[str] = mapped_column(String(32), default="draft", index=True)
+    application_method: Mapped[str] = mapped_column(
+        String(24), default="ASSISTED_APPLY", server_default="ASSISTED_APPLY"
+    )
+    continued_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     approval_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     external_application_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     submitted_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+    reviewed_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),
         nullable=True,
     )

@@ -38,7 +38,9 @@ async def search_connector(
             limit=payload.limit,
         )
     except Exception as exc:
-        raise HTTPException(status_code=502, detail=f"Connector request failed: {exc}") from exc
+        raise HTTPException(
+            status_code=502, detail=f"Connector request failed: {exc}"
+        ) from exc
 
     items = [
         NormalizedJobRead(

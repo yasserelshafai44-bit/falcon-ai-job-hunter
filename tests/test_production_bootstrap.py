@@ -1,6 +1,5 @@
-from fastapi import FastAPI
-
 from app.core.production import configure_production_app
+from fastapi import FastAPI
 
 
 def test_production_bootstrap_registers_middleware_and_handlers() -> None:

@@ -1,4 +1,4 @@
-﻿from app.queue.priority import Priority, sort_by_priority
+from app.queue.priority import Priority, sort_by_priority
 
 
 def test_priority_sort_orders_highest_first() -> None:

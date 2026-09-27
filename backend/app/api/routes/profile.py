@@ -14,16 +14,27 @@ router = APIRouter(prefix="/profile", tags=["candidate profile"])
 
 
 @router.get("", response_model=CandidateResponse)
-async def get_profile(user: Annotated[User, Depends(get_current_user)], session: Annotated[AsyncSession, Depends(get_db_session)]) -> Candidate:
-    profile = await session.scalar(select(Candidate).where(Candidate.user_id == user.id))
+async def get_profile(
+    user: Annotated[User, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db_session)],
+) -> Candidate:
+    profile = await session.scalar(
+        select(Candidate).where(Candidate.user_id == user.id)
+    )
     if profile is None:
         raise HTTPException(status_code=404, detail="Candidate profile not found")
     return profile
 
 
 @router.put("", response_model=CandidateResponse)
-async def upsert_profile(payload: CandidateUpsert, user: Annotated[User, Depends(get_current_user)], session: Annotated[AsyncSession, Depends(get_db_session)]) -> Candidate:
-    profile = await session.scalar(select(Candidate).where(Candidate.user_id == user.id))
+async def upsert_profile(
+    payload: CandidateUpsert,
+    user: Annotated[User, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db_session)],
+) -> Candidate:
+    profile = await session.scalar(
+        select(Candidate).where(Candidate.user_id == user.id)
+    )
     values = payload.model_dump()
     if profile is None:
         profile = Candidate(user_id=user.id, **values)

@@ -1,0 +1,33 @@
+services:
+  - type: web
+    name: falcon-ai-job-hunter
+    runtime: python
+    plan: free
+    region: frankfurt
+    branch: main
+    buildCommand: pip install -r requirements.txt
+    startCommand: bash scripts/render-start.sh
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.8
+      - key: PYTHONPATH
+        value: backend
+      - key: APP_ENV
+        value: production
+      - key: DEBUG
+        value: "false"
+      - key: LOCAL_PASSWORD_RESET_ENABLED
+        value: "false"
+      - key: ACCESS_TOKEN_MINUTES
+        value: "30"
+      - key: LOG_LEVEL
+        value: INFO
+      - key: CV_STORAGE_PATH
+        value: /tmp/falcon-cvs
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: falcon-ai-job-hunter-db
+          property: connectionString

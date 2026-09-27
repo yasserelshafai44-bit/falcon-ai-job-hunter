@@ -1,8 +1,12 @@
 from fastapi import APIRouter
 
+from app.api.routes.application_assistant import router as application_assistant_router
 from app.api.routes.applications import router as applications_router
 from app.api.routes.auth import router as auth_router
-from app.api.routes.candidate_intelligence import router as candidate_intelligence_router
+from app.api.routes.calibration import router as calibration_router
+from app.api.routes.candidate_intelligence import (
+    router as candidate_intelligence_router,
+)
 from app.api.routes.cvs import router as cvs_router
 from app.api.routes.generation import router as generation_router
 from app.api.routes.health import router as health_router
@@ -20,8 +24,10 @@ api_router.include_router(profile_router)
 api_router.include_router(preferences_router)
 api_router.include_router(cvs_router)
 api_router.include_router(applications_router)
+api_router.include_router(application_assistant_router)
 api_router.include_router(integrations_router)
 api_router.include_router(candidate_intelligence_router)
+api_router.include_router(calibration_router)
 api_router.include_router(generation_router)
 api_router.include_router(jobs_router)
 api_router.include_router(matches_router)

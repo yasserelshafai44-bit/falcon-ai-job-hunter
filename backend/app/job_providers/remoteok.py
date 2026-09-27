@@ -1,19 +1,33 @@
+import re
 from datetime import UTC, datetime
 from html import unescape
-import re
 from typing import Any
 
 import httpx
 
-from app.job_providers.base import JobProvider, NormalizedJob
+from app.job_providers.base import (
+    JobProvider,
+    NormalizedJob,
+    ProviderError,
+    ProviderRateLimitError,
+)
 
 
 class RemoteOKProvider(JobProvider):
     name = "remoteok"
+    display_name = "Remote OK"
     endpoint = "https://remoteok.com/api"
 
-    def __init__(self, client: httpx.AsyncClient | None = None) -> None:
+    def __init__(
+        self,
+        client: httpx.AsyncClient | None = None,
+        *,
+        endpoint: str | None = None,
+        timeout_seconds: float = 20,
+    ) -> None:
         self._client = client
+        self.endpoint = endpoint or self.endpoint
+        self.timeout_seconds = timeout_seconds
 
     async def search(
         self,
@@ -25,20 +39,31 @@ class RemoteOKProvider(JobProvider):
         del location
         owns_client = self._client is None
         client = self._client or httpx.AsyncClient(
-            timeout=20,
+            timeout=self.timeout_seconds,
             follow_redirects=True,
             headers={"User-Agent": "FalconAIJobHunter/0.5"},
         )
         try:
             response = await client.get(self.endpoint)
-            response.raise_for_status()
-            payload = response.json()
+            if response.status_code == 429:
+                raise ProviderRateLimitError(
+                    "Remote OK rate limit reached; wait and try the refresh again"
+                )
+            try:
+                response.raise_for_status()
+                payload = response.json()
+            except httpx.HTTPStatusError as exc:
+                raise ProviderError(
+                    f"Remote OK request failed with HTTP {exc.response.status_code}"
+                ) from exc
+            except ValueError as exc:
+                raise ProviderError("Remote OK returned malformed JSON") from exc
         finally:
             if owns_client:
                 await client.aclose()
 
         if not isinstance(payload, list):
-            raise ValueError("Unexpected Remote OK payload")
+            raise ProviderError("Remote OK returned an unexpected response shape")
 
         wanted = keyword.casefold().strip() if keyword else None
         jobs: list[NormalizedJob] = []
@@ -50,6 +75,9 @@ class RemoteOKProvider(JobProvider):
             title = str(item.get("position") or "").strip()
             company = str(item.get("company") or "").strip()
             description = _strip_html(str(item.get("description") or ""))
+            url = str(item.get("url") or item.get("apply_url") or "").strip()
+            if not title or not company or not description or not _valid_url(url):
+                continue
             tags = " ".join(str(tag) for tag in item.get("tags") or [])
             searchable = f"{title} {company} {description} {tags}".casefold()
 
@@ -60,16 +88,31 @@ class RemoteOKProvider(JobProvider):
                 NormalizedJob(
                     provider=self.name,
                     external_id=str(item["id"]),
-                    title=title or "Untitled role",
-                    company=company or "Unknown company",
-                    location=str(item.get("location") or "Remote"),
+                    title=title,
+                    company=company,
+                    location=str(
+                        item.get("location") or "Location not specified"
+                    ).strip(),
                     description=description,
-                    url=str(item.get("url") or item.get("apply_url") or ""),
+                    url=url,
                     remote=True,
+                    workplace_type="remote",
+                    requirements=tuple(
+                        str(tag).strip()
+                        for tag in item.get("tags") or []
+                        if str(tag).strip()
+                    ),
+                    employment_type=str(item.get("type") or "").strip() or None,
                     salary_min=_to_int(item.get("salary_min")),
                     salary_max=_to_int(item.get("salary_max")),
-                    currency="USD",
+                    currency=(
+                        str(item.get("currency") or "USD")
+                        if _to_int(item.get("salary_min"))
+                        or _to_int(item.get("salary_max"))
+                        else None
+                    ),
                     posted_at=_parse_datetime(item.get("date") or item.get("epoch")),
+                    retrieved_at=datetime.now(UTC),
                 )
             )
             if len(jobs) >= max(1, min(limit, 200)):
@@ -93,6 +136,12 @@ class RemoteOKProvider(JobProvider):
 def _strip_html(value: str) -> str:
     plain = re.sub(r"<[^>]+>", " ", unescape(value))
     return re.sub(r"\s+", " ", plain).strip()
+
+
+def _valid_url(value: str) -> bool:
+    return value.casefold().startswith(
+        ("https://remoteok.com/", "https://remoteok.io/")
+    )
 
 
 def _to_int(value: Any) -> int | None:

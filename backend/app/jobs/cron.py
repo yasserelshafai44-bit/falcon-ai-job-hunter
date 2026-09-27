@@ -22,14 +22,14 @@ class IntervalSchedule:
         return value + timedelta(seconds=self.seconds)
 
     @classmethod
-    def parse(cls, expression: str) -> "IntervalSchedule":
+    def parse(cls, expression: str) -> IntervalSchedule:
         """Parse expressions such as ``@every 30s`` or ``@every 5m``."""
 
         prefix = "@every "
         if not expression.startswith(prefix):
             raise ValueError("schedule must use '@every <number><s|m|h>'")
 
-        raw = expression[len(prefix):].strip()
+        raw = expression[len(prefix) :].strip()
         if len(raw) < 2:
             raise ValueError("invalid interval schedule")
 

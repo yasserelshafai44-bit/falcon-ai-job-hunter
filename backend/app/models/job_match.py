@@ -1,7 +1,15 @@
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import DateTime, ForeignKey, Integer, JSON, String, UniqueConstraint, func
+from sqlalchemy import (
+    JSON,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+    UniqueConstraint,
+    func,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database.base import Base
@@ -32,14 +40,18 @@ class JobMatch(Base):
     )
     overall_score: Mapped[int] = mapped_column(Integer, index=True)
     recommendation: Mapped[str] = mapped_column(String(32))
+    occupational_family: Mapped[str] = mapped_column(
+        String(64), default="unknown", index=True
+    )
+    seniority_assessment: Mapped[str] = mapped_column(
+        String(64), default="unknown", index=True
+    )
     strengths: Mapped[list[str]] = mapped_column(JSON, default=list)
     gaps: Mapped[list[str]] = mapped_column(JSON, default=list)
     mandatory_failures: Mapped[list[str]] = mapped_column(JSON, default=list)
     evidence: Mapped[list[dict[str, Any]]] = mapped_column(JSON, default=list)
     uncertainty: Mapped[list[str]] = mapped_column(JSON, default=list)
-    recommended_cv_track: Mapped[str | None] = mapped_column(
-        String(255), nullable=True
-    )
+    recommended_cv_track: Mapped[str | None] = mapped_column(String(255), nullable=True)
     recommended_next_action: Mapped[str] = mapped_column(String(255))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()

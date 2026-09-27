@@ -1,7 +1,6 @@
 import pytest
-from fastapi import HTTPException
-
 from app.core.rate_limit import InMemoryRateLimiter, RateLimitRule
+from fastapi import HTTPException
 
 
 @pytest.mark.asyncio

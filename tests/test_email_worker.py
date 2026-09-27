@@ -1,5 +1,4 @@
 import pytest
-
 from app.core.background import BackgroundTask
 from app.workers.email_worker import EmailWorker
 

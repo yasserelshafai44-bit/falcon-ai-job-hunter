@@ -1,7 +1,6 @@
+from app.core.production import configure_production_app
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-
-from app.core.production import configure_production_app
 
 
 def test_security_headers_are_added() -> None:

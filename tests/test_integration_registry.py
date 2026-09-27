@@ -1,5 +1,4 @@
 import pytest
-
 from app.integrations.base import JobSourceConnector, NormalizedJob
 from app.integrations.registry import ConnectorRegistry
 

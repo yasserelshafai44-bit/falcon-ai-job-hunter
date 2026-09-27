@@ -62,9 +62,7 @@ class JobRegistry:
         """Return enabled jobs whose next run time has arrived."""
 
         return [
-            job
-            for job in self.list_jobs()
-            if job.enabled and job.next_run_at <= now
+            job for job in self.list_jobs() if job.enabled and job.next_run_at <= now
         ]
 
     def remove(self, name: str) -> None:

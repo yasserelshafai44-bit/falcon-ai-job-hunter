@@ -1,7 +1,6 @@
 import pytest
-
-from app.services.pipeline_orchestrator import PipelineOrchestrator
 from app.services.job_state import JobState
+from app.services.pipeline_orchestrator import PipelineOrchestrator
 
 
 class FakePipeline:

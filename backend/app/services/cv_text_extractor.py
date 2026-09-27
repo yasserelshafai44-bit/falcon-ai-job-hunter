@@ -9,7 +9,7 @@ class CVTextExtractionError(ValueError):
 
 
 def extract_cv_text(path: Path) -> str:
-    """Extract normalized text from a PDF or DOCX document."""
+    """Extract normalized text from a PDF, DOCX, or plain-text document."""
     suffix = path.suffix.lower()
     try:
         if suffix == ".pdf":
@@ -18,6 +18,8 @@ def extract_cv_text(path: Path) -> str:
         elif suffix == ".docx":
             document = Document(str(path))
             text = "\n".join(paragraph.text for paragraph in document.paragraphs)
+        elif suffix == ".txt":
+            text = path.read_text(encoding="utf-8-sig")
         else:
             raise CVTextExtractionError("Unsupported CV file type")
     except Exception as exc:

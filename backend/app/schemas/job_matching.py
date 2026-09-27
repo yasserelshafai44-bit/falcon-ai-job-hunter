@@ -15,13 +15,20 @@ class MatchRecommendation(StrEnum):
 class MatchEvidence(BaseModel):
     dimension: str
     contribution: float
+    max_score: float = 0
+    status: str = "unknown"
     explanation: str
     sources: list[str] = Field(default_factory=list)
 
 
 class MatchScore(BaseModel):
     overall_score: int = Field(ge=0, le=100)
+    career_fit_score: int = Field(ge=0, le=100)
+    location_fit: str
+    location_fit_explanation: str
     recommendation: MatchRecommendation
+    occupational_family: str = "unknown"
+    seniority_assessment: str = "unknown"
     strengths: list[str] = Field(default_factory=list)
     gaps: list[str] = Field(default_factory=list)
     mandatory_failures: list[str] = Field(default_factory=list)

@@ -1,7 +1,6 @@
 """Tests for the in-memory task queue."""
 
 import pytest
-
 from app.core.background import TaskStatus
 from app.core.task_queue import InMemoryTaskQueue, TaskNotFoundError
 

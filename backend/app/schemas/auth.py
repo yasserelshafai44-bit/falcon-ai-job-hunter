@@ -11,6 +11,15 @@ class LoginRequest(BaseModel):
     password: str
 
 
+class LocalPasswordResetRequest(BaseModel):
+    email: EmailStr
+    new_password: str = Field(min_length=10, max_length=128)
+
+
+class LocalPasswordResetResponse(BaseModel):
+    message: str
+
+
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"

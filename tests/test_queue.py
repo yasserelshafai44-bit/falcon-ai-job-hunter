@@ -1,4 +1,4 @@
-﻿from app.queue.queue import TaskQueue
+from app.queue.queue import TaskQueue
 
 
 def test_queue_is_fifo() -> None:

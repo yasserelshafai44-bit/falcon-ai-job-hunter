@@ -1,5 +1,4 @@
 import pytest
-
 from app.core.background import RetryPolicy, TaskStatus
 from app.core.task_queue import InMemoryTaskQueue
 from app.workers.document_worker import DocumentWorker

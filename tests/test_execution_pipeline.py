@@ -1,5 +1,4 @@
 import pytest
-
 from app.services.execution_pipeline import ExecutionPipeline
 
 
