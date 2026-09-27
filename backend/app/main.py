@@ -49,20 +49,10 @@ if not frontend_path.is_dir():
 if frontend_path.is_dir():
     app.mount("/assets", StaticFiles(directory=frontend_path), name="frontend-assets")
 
+    @app.get("/", include_in_schema=False)
     @app.get("/app", include_in_schema=False)
     async def frontend() -> FileResponse:
         return FileResponse(
             frontend_path / "index.html",
             headers={"Cache-Control": "no-store, max-age=0"},
         )
-
-
-@app.get("/", tags=["root"])
-async def root() -> dict[str, str]:
-    """Return basic API metadata."""
-
-    return {
-        "name": settings.app_name,
-        "docs": "/docs",
-        "health": f"{settings.api_v1_prefix}/health",
-    }

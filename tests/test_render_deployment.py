@@ -1,3 +1,5 @@
+import re
+
 import pytest
 from app.core.config import Settings
 
@@ -23,6 +25,27 @@ def test_production_rejects_debug():
 async def test_frontend_assets(client):
     assert (await client.get("/app")).status_code == 200
     assert (await client.get("/assets/app.js")).status_code == 200
+
+
+async def test_root_serves_frontend_and_preserves_api(client, monkeypatch, tmp_path):
+    monkeypatch.chdir(tmp_path)
+    root = await client.get("/")
+    assert root.status_code == 200
+    assert root.headers["content-type"].startswith("text/html")
+    assert root.text == (await client.get("/app")).text
+    assets = re.findall(r'(?:src|href)="(/assets/[^\"]+)"', root.text)
+    assert assets
+    for asset in assets:
+        response = await client.get(asset)
+        assert response.status_code == 200
+        assert response.content
+    assert (await client.get("/docs")).status_code == 200
+    schema = await client.get("/openapi.json")
+    assert schema.status_code == 200
+    assert "/api/v1/auth/login" in schema.json()["paths"]
+    health = await client.get("/api/v1/health")
+    assert health.status_code == 200
+    assert health.json()["status"] == "ok"
 
 
 async def test_unavailable_cv_storage(client, monkeypatch, tmp_path):
