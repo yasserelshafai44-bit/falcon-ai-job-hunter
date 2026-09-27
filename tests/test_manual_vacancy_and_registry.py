@@ -55,6 +55,46 @@ async def test_registry_distinguishes_live_from_unsearchable(
     assert entries["Deliveroo"]["live_vacancies"] is None
 
 
+@pytest.mark.asyncio
+async def test_registry_distinguishes_verified_zero_from_failed_search(
+    client, monkeypatch
+):
+    from app.job_providers.base import JobProvider, ProviderError
+
+    class EmptyFeed(JobProvider):
+        name = "deliveroo"
+        complete_snapshot = True
+        authoritative_empty = True
+        fail = False
+
+        async def search(self, **kwargs):
+            if self.fail:
+                raise ProviderError("Employer unavailable")
+            return []
+
+    feed = EmptyFeed()
+    monkeypatch.setattr("app.api.routes.jobs.build_job_providers", lambda _: [feed])
+    headers, _ = await analysed_candidate(client)
+    response = await client.post(
+        "/api/v1/jobs/sync", headers=headers, json={"providers": ["deliveroo"]}
+    )
+    assert response.status_code == 200
+    entries = (await client.get("/api/v1/jobs/employers", headers=headers)).json()
+    zero = next(e for e in entries if e["id"] == "deliveroo")
+    assert zero["live_vacancies"] == 0
+    assert zero["latest_refresh_status"] == "completed"
+    assert zero["last_successful_refresh"] is not None
+    feed.fail = True
+    await client.post(
+        "/api/v1/jobs/sync", headers=headers, json={"providers": ["deliveroo"]}
+    )
+    entries = (await client.get("/api/v1/jobs/employers", headers=headers)).json()
+    failed = next(e for e in entries if e["id"] == "deliveroo")
+    assert failed["latest_refresh_status"] == "failed"
+    assert failed["latest_refresh_error"] == "Employer unavailable"
+    assert failed["last_successful_refresh"] == zero["last_successful_refresh"]
+
+
 def test_all_verified_direct_resolves_every_live_provider_only() -> None:
     expected = tuple(
         entry["provider"]

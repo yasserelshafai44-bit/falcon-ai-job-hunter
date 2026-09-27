@@ -59,13 +59,22 @@ class DominosUKProvider(JobProvider):
                     if node.text
                 )
             )
-            if any(
-                urlsplit(u).hostname != "jobs.dominos.co.uk"
-                or not re.match(r"/vacancies/\d+/", urlsplit(u).path)
-                for u in links
-            ):
+            unexpected = next(
+                (
+                    u
+                    for u in links
+                    if (
+                        urlsplit(u).hostname != "jobs.dominos.co.uk"
+                        or not re.match(r"/vacancies/\d+/", urlsplit(u).path)
+                    )
+                ),
+                None,
+            )
+            if unexpected:
                 raise ProviderError(
-                    "Domino's sitemap contains an unexpected vacancy URL"
+                    "Domino's sitemap contains an unexpected vacancy URL: "
+                    f"host={urlsplit(unexpected).hostname!r}, "
+                    f"path={urlsplit(unexpected).path[:160]!r}"
                 )
             if not count or int(count[1]) != len(links):
                 raise ProviderError(

@@ -1,3 +1,4 @@
+import asyncio
 from collections import Counter
 from datetime import UTC, datetime
 
@@ -9,6 +10,16 @@ from app.models.job_match import JobMatch
 from app.models.provider_refresh_run import ProviderRefreshRun
 from app.services.job_search import SyncResult
 from app.services.match_scoring import classify_occupational_family
+
+
+async def _family_distribution(jobs) -> Counter:
+    """Keep health/login requests responsive while summarising large feeds."""
+    counts = Counter()
+    for index, job in enumerate(jobs, 1):
+        counts[classify_occupational_family(job.title, job.description)] += 1
+        if index % 20 == 0:
+            await asyncio.sleep(0)
+    return counts
 
 
 async def record_refresh_runs(
@@ -33,9 +44,7 @@ async def record_refresh_runs(
                 )
             )
         )
-        family_distribution = Counter(
-            classify_occupational_family(job.title, job.description) for job in jobs
-        )
+        family_distribution = await _family_distribution(jobs)
         score_distribution: dict[str, int] = {}
         recommendation_distribution: dict[str, int] = {}
         if candidate_analysis_id is not None:
