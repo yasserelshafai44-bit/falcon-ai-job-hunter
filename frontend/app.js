@@ -288,4 +288,3 @@ function escapeHtml(value){return String(value).replace(/[&<>"']/g,c=>({'&':'&am
 
 
 async function regenerateMaterials(button){button.disabled=true;const status=button.closest('[data-workflow-id]').querySelector('.action-status');status.textContent='Generating drafts from your saved CV and this vacancy…';try{await request(`/application-workflows/${Number(button.dataset.id)}/regenerate-materials`,{method:'POST'});await loadApplications(Number(button.dataset.id));notice('New drafts are ready. Review both before requesting approval.')}catch(error){status.textContent=`Regeneration failed: ${error.message}`;button.disabled=false}}
-
