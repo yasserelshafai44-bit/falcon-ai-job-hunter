@@ -7,4 +7,6 @@ async def test_root_endpoint(client: AsyncClient) -> None:
     response = await client.get("/")
 
     assert response.status_code == 200
-    assert response.json()["docs"] == "/docs"
+    assert response.headers["content-type"].startswith("text/html")
+    assert 'id="cvForm"' in response.text
+    assert 'id="jobForm"' in response.text

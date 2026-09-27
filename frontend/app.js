@@ -2,9 +2,9 @@ const api='/api/v1';let token=localStorage.getItem('falcon_token')||'';let analy
 
 const $=id=>document.getElementById(id);const notice=message=>{$('notice').textContent=message;setTimeout(()=>{if($('notice').textContent===message)$('notice').textContent=''},5000)};
 
-async function request(path,options={}){const headers={...(options.headers||{})};if(token)headers.Authorization=`Bearer ${token}`;if(options.body&&!(options.body instanceof FormData)){headers['Content-Type']='application/json';options.body=JSON.stringify(options.body)}const response=await fetch(api+path,{...options,headers});const data=await response.json().catch(()=>({}));if(!response.ok){const message=typeof data.error?.message==='string'?data.error.message:typeof data.detail==='string'?data.detail:`Request failed (${response.status})`;if(response.status===401&&token){lock();throw new Error(`${message}. Please sign in again.`)}throw new Error(message)}return data}
+async function request(path,options={}){const headers={...(options.headers||{})};if(token)headers.Authorization=`Bearer ${token}`;if(options.body&&!(options.body instanceof FormData)){headers['Content-Type']='application/json';options.body=JSON.stringify(options.body)}const response=await fetch(api+path,{...options,headers});const data=await response.json().catch(()=>({}));if(!response.ok){const message=typeof data.error?.message==='string'?data.error.message:typeof data.detail==='string'?data.detail:`Request failed (${response.status})`;if(response.status===401&&token){lock();throw new Error(`${message}. Please sign in again.`)}const error=new Error(message);error.status=response.status;throw error}return data}
 
-function lock(){token='';analysisId=null;localStorage.removeItem('falcon_token');$('workspace').classList.add('locked');$('authCard').style.display='grid';$('session').textContent='Sign in required'}
+function lock(){token='';analysisId=null;$('analysis').innerHTML='';$('profileSuggestions').innerHTML='';localStorage.removeItem('falcon_token');$('workspace').classList.add('locked');$('authCard').style.display='grid';$('session').textContent='Sign in required'}
 
 function evidenceValue(item){return item?.value||''}
 
@@ -38,9 +38,9 @@ function renderAnalysis(result){const a=result.analysis;const suggestions=[['ful
 
 async function loadProfile(){try{currentProfile=await request('/profile');$('fullName').value=currentProfile.full_name||'';$('location').value=currentProfile.location||'';$('years').value=currentProfile.years_experience||''}catch(error){if(!error.message.includes('not found'))throw error}}
 
-async function restoreCandidateAnalysis(){const cvs=await request('/cvs');for(const cv of cvs){try{const result=await request(`/candidate-intelligence/cvs/${cv.id}`);analysisId=result.id;renderAnalysis(result);return}catch(error){if(error.message.includes('sign in again'))throw error}}$('analysis').textContent='No analysed CV found. Upload and analyse a CV first.'}
+async function restoreCandidateAnalysis(){const cvs=await request('/cvs');for(const cv of cvs){try{const result=await request(`/candidate-intelligence/cvs/${cv.id}`);analysisId=result.id;renderAnalysis(result);return}catch(error){if(error.status!==404)throw error}}$('analysis').textContent='No analysed CV found. Upload and analyse a CV first.'}
 
-async function unlock(){if(!token)return lock();try{await request('/auth/me');$('workspace').classList.remove('locked');$('authCard').style.display='none';$('session').textContent='Workspace active';await Promise.all([loadApplications(),loadProfile(),loadPreferences(),restoreCandidateAnalysis(),loadCalibration(),loadEmployerRegistry()])}catch(error){lock();notice(error.message)}}
+async function unlock(){if(!token)return lock();try{await request('/auth/me')}catch(error){notice(error.message);return}$('workspace').classList.remove('locked');$('authCard').style.display='none';$('session').textContent='Workspace active';const results=await Promise.allSettled([loadApplications(),loadProfile(),loadPreferences(),restoreCandidateAnalysis(),loadCalibration(),loadEmployerRegistry()]);const failed=results.find(result=>result.status==='rejected');if(failed)notice(failed.reason.message)}
 
 $('authForm').addEventListener('submit',async e=>{e.preventDefault();try{const mode=e.submitter.value;const email=$('email').value;const password=$('password').value;if(mode==='local-reset-password'){const data=await request('/auth/local-reset-password',{method:'POST',body:{email,new_password:password}});notice(data.message);return}const data=await request(`/auth/${mode}`,{method:'POST',body:{email,password}});token=data.access_token;localStorage.setItem('falcon_token',token);await unlock();notice('Workspace ready')}catch(error){notice(error.message)}});
 
