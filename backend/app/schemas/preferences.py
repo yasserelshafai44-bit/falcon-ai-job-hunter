@@ -1,13 +1,8 @@
 from pydantic import BaseModel, Field
 
-DEFAULT_HOME_LOCATION = "Royal Tunbridge Wells, Kent, UK"
-DEFAULT_PREFERRED_LOCATIONS = ["Royal Tunbridge Wells", "Tunbridge Wells"]
-DEFAULT_PREFERRED_REGIONS = [
-    "Kent",
-    "East Sussex",
-    "West Sussex",
-    "South East England",
-]
+DEFAULT_HOME_LOCATION = None
+DEFAULT_PREFERRED_LOCATIONS = []
+DEFAULT_PREFERRED_REGIONS = []
 
 
 class JobPreferenceUpsert(BaseModel):
@@ -22,10 +17,10 @@ class JobPreferenceUpsert(BaseModel):
     )
     search_radius_miles: int | None = Field(default=None, ge=0, le=1000)
     maximum_commute_minutes: int | None = Field(default=None, ge=0, le=600)
-    london_acceptable: bool | None = True
+    london_acceptable: bool | None = None
     anywhere_uk_acceptable: bool | None = None
-    remote_acceptable: bool | None = True
-    hybrid_acceptable: bool | None = True
+    remote_acceptable: bool | None = None
+    hybrid_acceptable: bool | None = None
     relocation_acceptable: bool | None = None
     work_arrangements: list[str] = Field(default_factory=list)
     industries: list[str] = Field(default_factory=list)

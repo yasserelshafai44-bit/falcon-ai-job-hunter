@@ -29,8 +29,6 @@ async def enrich_analysis_with_profile(
             "accepted_cv_enrichment", {}
         )
     if preferences is not None:
-        if preferences.home_location:
-            locations.append(preferences.home_location)
         locations.extend(preferences.preferred_locations)
         locations.extend(preferences.preferred_regions)
         context["salary_min"] = preferences.minimum_salary

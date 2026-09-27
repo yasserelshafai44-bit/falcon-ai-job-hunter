@@ -82,22 +82,14 @@ async def test_default_location_profile_is_explicit_without_invented_commute(
     response = await client.put("/api/v1/preferences", headers=headers, json={})
     assert response.status_code == 200
     data = response.json()
-    assert data["home_location"] == "Royal Tunbridge Wells, Kent, UK"
-    assert data["preferred_locations"] == [
-        "Royal Tunbridge Wells",
-        "Tunbridge Wells",
-    ]
-    assert data["preferred_regions"] == [
-        "Kent",
-        "East Sussex",
-        "West Sussex",
-        "South East England",
-    ]
+    assert data["home_location"] is None
+    assert data["preferred_locations"] == []
+    assert data["preferred_regions"] == []
     assert data["search_radius_miles"] is None
     assert data["maximum_commute_minutes"] is None
-    assert data["london_acceptable"] is True
-    assert data["hybrid_acceptable"] is True
-    assert data["remote_acceptable"] is True
+    assert data["london_acceptable"] is None
+    assert data["hybrid_acceptable"] is None
+    assert data["remote_acceptable"] is None
     assert data["relocation_acceptable"] is None
 
 
@@ -119,7 +111,9 @@ async def test_manual_official_import_ranks_and_deduplicates_url(
     client: AsyncClient,
 ) -> None:
     headers, analysis_id = await analysed_candidate(client)
-    preferences = await client.put("/api/v1/preferences", headers=headers, json={})
+    preferences = await client.put(
+        "/api/v1/preferences", headers=headers, json={"hybrid_acceptable": True}
+    )
     assert preferences.status_code == 200
     payload = manual_payload(
         analysis_id,

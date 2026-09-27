@@ -7,7 +7,6 @@ import re
 from dataclasses import dataclass
 from typing import Any
 
-from app.job_providers.location import normalize_location
 from app.schemas.job_matching import MatchEvidence, MatchRecommendation, MatchScore
 from app.services.career_evidence import (
     extract_remit,
@@ -15,6 +14,7 @@ from app.services.career_evidence import (
     required_years,
     role_description,
 )
+from app.services.location_fit import assess_location
 from app.services.occupational_identity import specialist_evidence, specialist_identity
 from app.services.operational_scope import assess_operational_scope
 
@@ -977,80 +977,12 @@ def score_candidate_against_job(
     preferences = [
         str(x) for x in candidate_analysis.get("preferred_locations", []) if x
     ]
-    job_location = normalize_location(
-        job.location, remote=job.remote, workplace_type=job.workplace_type
+    location = assess_location(
+        candidate_analysis,
+        job.location,
+        remote=job.remote,
+        workplace_type=job.workplace_type,
     )
-    preferred_locations = [normalize_location(value) for value in preferences]
-    geographic_match = any(
-        preferred.canonical == job_location.canonical
-        or (
-            preferred.region_code is not None
-            and preferred.region_code == job_location.region_code
-        )
-        or preferred.display.casefold() in job_location.display.casefold()
-        or (
-            preferred.country_code == job_location.country_code
-            and preferred.canonical.endswith(":countrywide")
-        )
-        for preferred in preferred_locations
-    )
-    prefers_uk = any(preferred.is_uk for preferred in preferred_locations)
-    anywhere_uk = candidate_analysis.get("anywhere_uk_acceptable")
-    london_acceptable = candidate_analysis.get("london_acceptable")
-    remote_acceptable = candidate_analysis.get("remote_acceptable")
-    hybrid_acceptable = candidate_analysis.get("hybrid_acceptable")
-    relocation_acceptable = candidate_analysis.get("relocation_acceptable")
-    is_london = "london" in job_location.canonical
-    if anywhere_uk is True and job_location.is_uk:
-        geographic_match = True
-    if london_acceptable is True and is_london:
-        geographic_match = True
-    if relocation_acceptable is True and job_location.is_uk is True:
-        geographic_match = True
-    arrangement_mismatch = bool(
-        (job.remote and remote_acceptable is False)
-        or (job.workplace_type == "hybrid" and hybrid_acceptable is False)
-        or (is_london and london_acceptable is False)
-    )
-    geographic_mismatch = bool(
-        arrangement_mismatch
-        or (
-            preferences
-            and not geographic_match
-            and (not job.remote or (prefers_uk and job_location.is_uk is False))
-        )
-    )
-    if geographic_match:
-        location = (
-            0,
-            "matched",
-            f"Location — {job.location} matches a saved candidate location/preference",
-        )
-    elif geographic_mismatch:
-        location = (
-            0,
-            "mismatched",
-            f"Location — vacancy geography {job.location} is not supported by saved preferences",
-        )
-    elif job.remote:
-        if remote_acceptable is True and job_location.is_uk is not False:
-            location = (
-                0,
-                "matched",
-                f"Location — remote work is explicitly acceptable ({job.location})",
-            )
-        else:
-            location = (
-                0,
-                "unknown",
-                f"Location — remote geography/eligibility is unconfirmed (listed: {job.location})",
-            )
-    else:
-        location = (
-            0,
-            "unknown",
-            f"Location — unconfirmed; no saved candidate preference supports {job.location}",
-        )
     evidence.append(_component("location", *location, preferences[:3]))
 
     candidate_years = _years(
