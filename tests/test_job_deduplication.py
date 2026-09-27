@@ -52,6 +52,35 @@ class DuplicateProvider(JobProvider):
 
 
 @pytest.mark.asyncio
+async def test_verified_empty_snapshot_closes_without_deleting_saved_record():
+    provider = DuplicateProvider("verified", "existing", complete_snapshot=True)
+    async with TestSession() as session:
+        await sync_jobs(
+            session=session,
+            providers=[provider],
+            keyword=None,
+            location=None,
+            limit_per_provider=10,
+        )
+        before = await session.scalar(select(DiscoveredJob))
+        original_id = before.id
+        provider.jobs_visible = False
+        provider.authoritative_empty = True
+        result = await sync_jobs(
+            session=session,
+            providers=[provider],
+            keyword=None,
+            location=None,
+            limit_per_provider=10,
+        )
+        after = await session.scalar(select(DiscoveredJob))
+        assert after.id == original_id
+        assert after.is_active is False
+        assert after.closed_at is not None
+        assert result.closed == 1
+
+
+@pytest.mark.asyncio
 async def test_cross_provider_duplicate_is_stored_once() -> None:
     async with TestSession() as session:
         first = await sync_jobs(

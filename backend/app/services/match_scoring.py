@@ -488,6 +488,11 @@ def _role_family(title: str, description: str) -> str:
     specialist = specialist_identity(title, description)
     if specialist:
         return specialist
+    if re.search(
+        r"\bjunior\b|\b(?:platter|warehouse|restaurant|kitchen) team leader\b|"
+        r"\bshift (?:manager|leader|supervisor)\b", folded
+    ):
+        return "junior_support"
     # Merchant/partner support is not ownership of the partner restaurants.
     if re.search(r"partner|merchant|support", folded) and re.search(
         r"(?:channel|queue|agent|contact.centre|call.centre)", description, re.I

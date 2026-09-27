@@ -38,6 +38,7 @@ class JobProvider(ABC):
     display_name: str
     is_demo: bool = False
     complete_snapshot: bool = False
+    authoritative_empty: bool = False
 
     @abstractmethod
     async def search(

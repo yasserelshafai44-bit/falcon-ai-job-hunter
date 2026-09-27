@@ -1,5 +1,6 @@
 import asyncio
 import re
+from dataclasses import replace
 from datetime import UTC, datetime
 from html import unescape
 from typing import Any
@@ -13,7 +14,6 @@ from app.job_providers.base import (
     ProviderRateLimitError,
 )
 from app.job_providers.location import normalize_location
-from app.job_providers.role_filter import classify_role
 
 
 class SmartRecruitersProvider(JobProvider):
@@ -21,7 +21,7 @@ class SmartRecruitersProvider(JobProvider):
 
     api_root = "https://api.smartrecruiters.com/v1/companies"
     page_size = 100
-    max_pages = 10
+    max_pages = 100
     max_detail_concurrency = 5
     complete_snapshot = False
 
@@ -47,6 +47,7 @@ class SmartRecruitersProvider(JobProvider):
         self._client = client
         self.api_root = (api_root or self.api_root).rstrip("/")
         self.timeout_seconds = timeout_seconds
+        self.cached_jobs: dict[str, NormalizedJob] = {}
 
     @property
     def postings_endpoint(self) -> str:
@@ -60,6 +61,7 @@ class SmartRecruitersProvider(JobProvider):
         limit: int = 200,
     ) -> list[NormalizedJob]:
         self.complete_snapshot = False
+        self.authoritative_empty = False
         owns_client = self._client is None
         client = self._client or httpx.AsyncClient(
             timeout=httpx.Timeout(self.timeout_seconds, connect=10),
@@ -73,7 +75,19 @@ class SmartRecruitersProvider(JobProvider):
             summaries = await self._fetch_all_summaries(client)
             semaphore = asyncio.Semaphore(self.max_detail_concurrency)
 
-            async def fetch(item: dict[str, Any]) -> dict[str, Any]:
+            async def fetch(item: dict[str, Any]) -> dict[str, Any] | NormalizedJob:
+                cached = self.cached_jobs.get(str(item["id"]))
+                released = _parse_datetime(item.get("releasedDate"))
+                # Posting API content changes require republishing. Always read
+                # the complete current list; reuse detail only for the same release.
+                if (
+                    cached
+                    and released
+                    and cached.posted_at
+                    and cached.posted_at.replace(tzinfo=UTC) == released
+                    and cached.title == item.get("name")
+                ):
+                    return replace(cached, retrieved_at=datetime.now(UTC))
                 async with semaphore:
                     return await self._fetch_detail(client, str(item["id"]))
 
@@ -92,10 +106,12 @@ class SmartRecruitersProvider(JobProvider):
         jobs: list[NormalizedJob] = []
         seen: set[str] = set()
         for detail in details:
-            job = self._normalize(detail, retrieved_at)
+            job = (
+                detail
+                if isinstance(detail, NormalizedJob)
+                else self._normalize(detail, retrieved_at)
+            )
             if job is None or job.external_id in seen:
-                continue
-            if not classify_role(job.title, job.description).eligible:
                 continue
             normalized = normalize_location(
                 job.location, remote=job.remote, workplace_type=job.workplace_type
@@ -109,12 +125,13 @@ class SmartRecruitersProvider(JobProvider):
             jobs.append(job)
             seen.add(job.external_id)
 
-        safe_limit = max(1, min(limit, 500))
+        safe_limit = max(1, min(limit, 10000))
         self.complete_snapshot = (
             keyword is None and location is None and len(jobs) <= safe_limit
         )
         if len(jobs) > safe_limit:
             self.complete_snapshot = False
+        self.authoritative_empty = self.complete_snapshot and not jobs
         return jobs[:safe_limit]
 
     async def _fetch_all_summaries(

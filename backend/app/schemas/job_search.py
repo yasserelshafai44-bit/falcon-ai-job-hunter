@@ -44,7 +44,7 @@ class JobSyncRequest(BaseModel):
     keyword: str | None = Field(default=None, max_length=120)
     location: str | None = Field(default=None, max_length=120)
     providers: list[str] = Field(default_factory=lambda: ["remoteok"])
-    limit_per_provider: int = Field(default=200, ge=1, le=500)
+    limit_per_provider: int = Field(default=10000, ge=1, le=10000)
     candidate_analysis_id: int | None = None
 
 
@@ -79,6 +79,9 @@ class EmployerRegistryRead(BaseModel):
     live_vacancies: int | None = None
     latest_refresh_vacancies: int | None = None
     last_checked_at: datetime | None = None
+    last_successful_refresh: datetime | None = None
+    latest_refresh_status: str | None = None
+    latest_refresh_error: str | None = None
 
 
 class ManualJobImport(BaseModel):

@@ -32,6 +32,7 @@ const context=vm.createContext({
     if(url==='/api/v1/candidate-intelligence/cvs/12/analyze')persisted=true;
     if(url.startsWith('/api/v1/candidate-intelligence/'))return {ok:true,json:async()=>analysis};
     if(url==='/api/v1/jobs/sync')return {ok:true,json:async()=>({providers_requested:['local']})};
+    if(url==='/api/v1/matches/jobs/91/score')return {ok:true,json:async()=>({job_id:91,candidate_analysis_id:37,overall_score:80})};
     if(url==='/api/v1/matches')return {ok:true,json:async()=>({items:[{job_id:91,candidate_analysis_id:37,overall_score:80}]})};
     throw new Error(`Unexpected API request ${url}`);
   },
@@ -57,7 +58,9 @@ assert.equal(run('token'),'authenticated-user-token','Non-authentication errors 
 await control('jobForm').listeners.submit({preventDefault(){}});
 const sync=calls.find(c=>c.url==='/api/v1/jobs/sync');
 assert.ok(sync,'Discover & Rank must reach the backend after displaying an analysed CV');
-assert.equal(JSON.parse(sync.options.body).candidate_analysis_id,37);
+const scored=calls.find(c=>c.url==='/api/v1/matches/jobs/91/score');
+assert.ok(scored);
+assert.equal(JSON.parse(scored.options.body).candidate_analysis_id,37);
 assert.equal(sync.options.headers.Authorization,'Bearer authenticated-user-token');
 assert.equal(run('currentRankedJobs.length'),1);
 

@@ -28,12 +28,12 @@ def _detail(job_id: str) -> dict:
 
 
 @pytest.mark.asyncio
-async def test_greene_king_queries_target_families_and_deduplicates() -> None:
+async def test_greene_king_fetches_unfiltered_snapshot() -> None:
     queries: list[str] = []
 
     def handler(request: httpx.Request) -> httpx.Response:
         if request.url.path.endswith("/postings"):
-            queries.append(request.url.params["q"])
+            queries.append(request.url.params.get("q"))
             return httpx.Response(
                 200,
                 json={"totalFound": 1, "content": [{"id": "gk-1"}]},
@@ -47,7 +47,8 @@ async def test_greene_king_queries_target_families_and_deduplicates() -> None:
         )
         jobs = await provider.search(limit=100)
 
-    assert queries == list(provider.search_queries)
+    assert queries == [None]
+    assert provider.search_queries == ()
     assert [job.external_id for job in jobs] == ["gk-1"]
     assert jobs[0].company == "Greene King"
     assert provider.complete_snapshot is True

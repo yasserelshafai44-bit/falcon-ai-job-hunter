@@ -2,20 +2,13 @@ from app.job_providers.smartrecruiters import SmartRecruitersProvider
 
 
 class GreeneKingUKProvider(SmartRecruitersProvider):
-    """Public Greene King postings limited to senior operations search families."""
+    """All public UK Greene King postings; relevance is decided by ranking."""
 
     def __init__(self, **kwargs: object) -> None:
         super().__init__(
             name="greene_king_uk",
-            display_name="Greene King UK Operations Careers",
+            display_name="Greene King UK Careers",
             company_identifier="GreeneKing",
             employer="Greene King",
-            search_queries=(
-                "area manager",
-                "regional manager",
-                "operations manager",
-                "district manager",
-                "franchise operations",
-            ),
             **kwargs,
         )

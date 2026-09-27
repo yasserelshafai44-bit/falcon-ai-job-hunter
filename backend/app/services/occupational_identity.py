@@ -3,6 +3,9 @@
 import re
 
 SPECIALIST_TITLES = {
+    "marketing": (
+        r"head of (?:innovation|marketing)|innovation director|product marketing"
+    ),
     "culinary": (
         r"(?:executive |head |sous |commis )?chef(?: manager| de partie)?|cook|"
         r"culinary (?:operations )?(?:manager|director|lead)|"

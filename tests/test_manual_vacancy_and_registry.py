@@ -52,7 +52,7 @@ async def test_registry_distinguishes_live_from_unsearchable(
     assert entries["Burger King UK"]["live_vacancies"] is None
     assert entries["Burger King UK"]["latest_refresh_vacancies"] is None
     assert entries["Burger King UK"]["last_checked_at"] is not None
-    assert entries["Deliveroo"]["live_vacancies"] == 0
+    assert entries["Deliveroo"]["live_vacancies"] is None
 
 
 def test_all_verified_direct_resolves_every_live_provider_only() -> None:

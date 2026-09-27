@@ -84,7 +84,7 @@ async def test_smartrecruiters_paginates_and_preserves_full_provenance() -> None
 
 
 @pytest.mark.asyncio
-async def test_smartrecruiters_rejects_non_uk_and_irrelevant_roles() -> None:
+async def test_smartrecruiters_rejects_non_uk_but_retains_all_occupations() -> None:
     details = {
         "1": detail("1", country="us"),
         "2": detail("2", title="Software Engineering Manager"),
@@ -103,7 +103,7 @@ async def test_smartrecruiters_rejects_non_uk_and_irrelevant_roles() -> None:
             client=client, api_root="https://example.test/v1/companies"
         ).search()
 
-    assert [job.external_id for job in jobs] == ["3"]
+    assert [job.external_id for job in jobs] == ["2", "3"]
 
 
 @pytest.mark.asyncio
@@ -122,6 +122,32 @@ async def test_smartrecruiters_rejects_malformed_list_response(payload: dict) ->
         with pytest.raises(ProviderError):
             await provider.search()
     assert provider.complete_snapshot is False
+
+
+@pytest.mark.asyncio
+async def test_cached_detail_requires_same_release_and_current_list_membership():
+    current = detail("1")
+    rows = [current]
+    detail_calls = []
+
+    def handler(request):
+        if request.url.path.endswith("/postings"):
+            return httpx.Response(200, json={"totalFound": len(rows), "content": rows})
+        detail_calls.append(request.url.path)
+        return httpx.Response(200, json=current)
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        provider = RaisingCanesUKProvider(client=client)
+        first = await provider.search()
+        provider.cached_jobs = {first[0].external_id: first[0]}
+        assert len(await provider.search()) == 1
+        assert len(detail_calls) == 1
+        current["releasedDate"] = "2026-09-28T10:00:00Z"
+        await provider.search()
+        assert len(detail_calls) == 2
+        rows.clear()
+        assert await provider.search() == []
+        assert provider.complete_snapshot and provider.authoritative_empty
 
 
 @pytest.mark.asyncio

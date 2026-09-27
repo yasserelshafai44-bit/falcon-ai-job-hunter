@@ -12,7 +12,6 @@ from app.job_providers.base import (
     ProviderRateLimitError,
 )
 from app.job_providers.location import normalize_location
-from app.job_providers.role_filter import classify_role
 
 
 class KFCUKProvider(JobProvider):
@@ -41,6 +40,7 @@ class KFCUKProvider(JobProvider):
         limit: int = 200,
     ) -> list[NormalizedJob]:
         self.complete_snapshot = False
+        self.authoritative_empty = False
         owns_client = self._client is None
         client = self._client or httpx.AsyncClient(
             timeout=httpx.Timeout(self.timeout_seconds, connect=10),
@@ -79,7 +79,12 @@ class KFCUKProvider(JobProvider):
         if not isinstance(items, list) or len(items) > self.max_payload_jobs:
             raise ProviderError("KFC UK Careers returned an unexpected response shape")
         total = _to_int(payload.get("results_total"))
-        self.complete_snapshot = total is not None and total == len(items)
+        self.complete_snapshot = (
+            total is not None
+            and total == len(items)
+            and keyword is None
+            and location is None
+        )
         retrieved_at = datetime.now(UTC)
         wanted = keyword.casefold().strip() if keyword else None
         wanted_location = location.casefold().strip() if location else None
@@ -87,7 +92,7 @@ class KFCUKProvider(JobProvider):
         seen_external_ids: set[str] = set()
         for item in items:
             job = _normalize_job(item, retrieved_at)
-            if job is None or not classify_role(job.title, job.description).eligible:
+            if job is None:
                 continue
             if job.external_id in seen_external_ids:
                 continue
@@ -102,9 +107,10 @@ class KFCUKProvider(JobProvider):
                 continue
             jobs.append(job)
             seen_external_ids.add(job.external_id)
-            if len(jobs) >= max(1, min(limit, 500)):
+            if len(jobs) >= max(1, min(limit, 10000)):
                 self.complete_snapshot = False
                 break
+        self.authoritative_empty = self.complete_snapshot and not jobs
         return jobs
 
 

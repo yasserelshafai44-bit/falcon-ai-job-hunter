@@ -47,8 +47,10 @@ EMPLOYER_REGISTRY: tuple[EmployerRegistryEntry, ...] = (
         "category": "Hospitality & Contract Catering",
         "status": "LIVE",
         "provider": "wsh_group_uk",
-        "careers_url": "https://careers.wshgroup.co.uk/",
-        "reason": "Verified SmartRecruiters public Posting API",
+        "careers_url": "https://careers.smartrecruiters.com/WSHGroup",
+        "reason": "Westbury Street Holdings public UK postings across "
+        "catering/hospitality brands including BaxterStorey "
+        "and Caterlink",
     },
     {
         "id": "greene_king_uk",
@@ -57,7 +59,8 @@ EMPLOYER_REGISTRY: tuple[EmployerRegistryEntry, ...] = (
         "status": "LIVE",
         "provider": "greene_king_uk",
         "careers_url": "https://jobs.greeneking.co.uk/",
-        "reason": "Verified SmartRecruiters public Posting API",
+        "reason": "Documented SmartRecruiters public UK Posting API; all "
+        "occupational families retained",
     },
     {
         "id": "burger_king_uk",
@@ -90,10 +93,12 @@ EMPLOYER_REGISTRY: tuple[EmployerRegistryEntry, ...] = (
         "id": "costa_coffee",
         "employer": "Costa Coffee",
         "category": "Coffee & Café",
-        "status": "MANUAL_ONLY",
+        "status": "AUTHORIZATION_REQUIRED",
         "provider": None,
         "careers_url": "https://costacareers.co.uk/",
-        "reason": "No reliable authorised public vacancy API is verified",
+        "reason": "Public WordPress vacancy feed exists, but published "
+        "website terms prohibit reuse beyond personal print "
+        "copies; permission is needed",
     },
     {
         "id": "starbucks_uk",
@@ -120,16 +125,20 @@ EMPLOYER_REGISTRY: tuple[EmployerRegistryEntry, ...] = (
         "status": "MANUAL_ONLY",
         "provider": None,
         "careers_url": "https://careerssearch.greggs.co.uk/",
-        "reason": "Session-oriented recruitment site is unsuitable for automation",
+        "reason": "Public Tribepad HTML board declares a ten-second "
+        "crawl delay; no complete machine feed verified in "
+        "this assessment",
     },
     {
         "id": "dominos_uk",
         "employer": "Domino's UK & Ireland",
         "category": "QSR & Restaurants",
-        "status": "AUTHORIZATION_REQUIRED",
-        "provider": None,
+        "status": "LIVE",
+        "provider": "dominos_uk",
         "careers_url": "https://jobs.dominos.co.uk/",
-        "reason": "No authorised public Eploy tenant feed is verified",
+        "reason": "Official corporate live-jobs.xml sitemap and "
+        "JobPosting JSON-LD; excludes separately operated "
+        "franchise boards",
     },
     {
         "id": "pizza_hut_uk",
@@ -138,7 +147,8 @@ EMPLOYER_REGISTRY: tuple[EmployerRegistryEntry, ...] = (
         "status": "AUTHORIZATION_REQUIRED",
         "provider": None,
         "careers_url": "https://www.careersatpizzahut.co.uk/",
-        "reason": "No documented machine feed with safe reconciliation is verified",
+        "reason": "Official WordPress REST discovery returns HTTP 401; "
+        "no authorised public vacancy feed verified",
     },
     {
         "id": "taco_bell_uk",
@@ -156,16 +166,19 @@ EMPLOYER_REGISTRY: tuple[EmployerRegistryEntry, ...] = (
         "status": "AUTHORIZATION_REQUIRED",
         "provider": None,
         "careers_url": "https://careers.popeyesuk.com/vacancies",
-        "reason": "No documented public vacancy feed is verified",
+        "reason": "Official careers site uses Talos360; no documented "
+        "public complete vacancy interface verified. An "
+        "authorised integration is required.",
     },
     {
         "id": "five_guys_uk",
         "employer": "Five Guys UK",
         "category": "QSR & Restaurants",
-        "status": "AUTHORIZATION_REQUIRED",
+        "status": "UNAVAILABLE",
         "provider": None,
         "careers_url": "https://jobs.fiveguys.co.uk/jobs/home/",
-        "reason": "No authorised public Eploy tenant feed is verified",
+        "reason": "Official UK careers hostname could not be reached in "
+        "this assessment; not a zero-vacancy result",
     },
     {
         "id": "subway_uk",
@@ -180,19 +193,22 @@ EMPLOYER_REGISTRY: tuple[EmployerRegistryEntry, ...] = (
         "id": "just_eat",
         "employer": "Just Eat Takeaway.com",
         "category": "Delivery & Marketplace",
-        "status": "MANUAL_ONLY",
+        "status": "AUTHORIZATION_REQUIRED",
         "provider": None,
         "careers_url": "https://careers.justeattakeaway.com/global/en/search-results",
-        "reason": "No verified public careers API is available",
+        "reason": "Official Phenom/Workday careers UI; no authorised "
+        "public tenant feed verified",
     },
     {
         "id": "uber",
         "employer": "Uber / Uber Eats",
         "category": "Delivery & Marketplace",
-        "status": "MANUAL_ONLY",
+        "status": "UNAVAILABLE",
         "provider": None,
         "careers_url": "https://www.uber.com/us/en/careers/list/",
-        "reason": "No verified public careers API is available",
+        "reason": "Official careers request returned HTTP 406; no "
+        "challenge bypass or alternate private endpoint "
+        "attempted",
     },
     {
         "id": "nandos_uk",
@@ -201,20 +217,18 @@ EMPLOYER_REGISTRY: tuple[EmployerRegistryEntry, ...] = (
         "status": "AUTHORIZATION_REQUIRED",
         "provider": None,
         "careers_url": "https://nandos.careers/",
-        "reason": (
-            "Official vacancies use Workday; no authorised public feed is verified"
-        ),
+        "reason": "Official vacancies use Workday; no authorised public "
+        "feed is verified",
     },
     {
         "id": "wendys_uk",
         "employer": "Wendy's UK",
         "category": "QSR & Restaurants",
-        "status": "UNAVAILABLE",
+        "status": "MANUAL_ONLY",
         "provider": None,
         "careers_url": "https://wendys-careers.co.uk/job-search/",
-        "reason": (
-            "Careers search enforces browser verification and exposes no public feed"
-        ),
+        "reason": "Official page is accessible; REST discovery exposes "
+        "ordinary pages, not a verified vacancy collection",
     },
     {
         "id": "caffe_nero",
@@ -223,7 +237,9 @@ EMPLOYER_REGISTRY: tuple[EmployerRegistryEntry, ...] = (
         "status": "MANUAL_ONLY",
         "provider": None,
         "careers_url": "https://careers.caffenero.com/",
-        "reason": "No documented public vacancy endpoint is verified",
+        "reason": "Legacy careers host points to "
+        "caffenero.com/uk/careers; no verified public vacancy "
+        "feed",
     },
     {
         "id": "gails",
@@ -232,20 +248,18 @@ EMPLOYER_REGISTRY: tuple[EmployerRegistryEntry, ...] = (
         "status": "MANUAL_ONLY",
         "provider": None,
         "careers_url": "https://jobs.gailsbread.co.uk/en-gb/",
-        "reason": (
-            "Official careers UI is accessible but no public machine feed is verified"
-        ),
+        "reason": "Official inploi careers UI is accessible; no "
+        "documented public vacancy feed verified",
     },
     {
         "id": "compass_group_uk",
         "employer": "Compass Group UK & Ireland",
         "category": "Hospitality & Multi-site",
-        "status": "AUTHORIZATION_REQUIRED",
+        "status": "MANUAL_ONLY",
         "provider": None,
         "careers_url": "https://jobs.compass-group.co.uk/",
-        "reason": (
-            "No documented public tenant feed with stable reconciliation is verified"
-        ),
+        "reason": "Official inploi careers UI is accessible; no "
+        "documented public vacancy feed verified",
     },
     {
         "id": "ssp_uk",
@@ -254,7 +268,9 @@ EMPLOYER_REGISTRY: tuple[EmployerRegistryEntry, ...] = (
         "status": "MANUAL_ONLY",
         "provider": None,
         "careers_url": "https://careers.foodtravelexperts.com/",
-        "reason": "No documented public vacancy API is verified",
+        "reason": "SuccessFactors careers UI is public; no authorised "
+        "public tenant feed verified; robots excludes services "
+        "paths",
     },
     {
         "id": "mitchells_butlers",
@@ -263,10 +279,9 @@ EMPLOYER_REGISTRY: tuple[EmployerRegistryEntry, ...] = (
         "status": "AUTHORIZATION_REQUIRED",
         "provider": None,
         "careers_url": "https://www.mbcareersandjobs.com/",
-        "reason": (
-            "SmartRecruiters Attrax UI found; a public tenant posting contract is not "
-            "verified"
-        ),
+        "reason": "Official Attrax site links Harri recruitment; no "
+        "verified public tenant postings feed or authorised "
+        "integration",
     },
     {
         "id": "whitbread",
@@ -275,9 +290,8 @@ EMPLOYER_REGISTRY: tuple[EmployerRegistryEntry, ...] = (
         "status": "AUTHORIZATION_REQUIRED",
         "provider": None,
         "careers_url": "https://www.whitbreadcareers.com/search-and-apply/",
-        "reason": (
-            "Official search identifies Dayforce; no authorised public feed is verified"
-        ),
+        "reason": "Official search identifies Dayforce; no authorised "
+        "public feed is verified",
     },
     {
         "id": "wagamama",
@@ -286,7 +300,8 @@ EMPLOYER_REGISTRY: tuple[EmployerRegistryEntry, ...] = (
         "status": "MANUAL_ONLY",
         "provider": None,
         "careers_url": "https://jobs.wagamama.uk/search",
-        "reason": "No documented public vacancy API is verified",
+        "reason": "Official inploi search is accessible; no documented "
+        "public vacancy feed verified",
     },
     {
         "id": "amazon_operations",
@@ -296,6 +311,26 @@ EMPLOYER_REGISTRY: tuple[EmployerRegistryEntry, ...] = (
         "provider": None,
         "careers_url": "https://jobs.amazon.co.uk/en/",
         "reason": "Official jobs are public, but no documented vacancy API is verified",
+    },
+    {
+        "id": "gopuff_uk",
+        "employer": "Gopuff",
+        "category": "Delivery & Marketplace",
+        "status": "LIVE",
+        "provider": "gopuff_uk",
+        "careers_url": "https://www.gopuff.com/go/careers",
+        "reason": "Documented public Lever published-postings API; "
+        "current UK openings only; talent pools excluded",
+    },
+    {
+        "id": "deliverect_uk",
+        "employer": "Deliverect",
+        "category": "Delivery & Marketplace",
+        "status": "LIVE",
+        "provider": "deliverect_uk",
+        "careers_url": "https://www.deliverect.com/en/careers-home",
+        "reason": "Documented public Lever published-postings API; "
+        "current UK openings only; talent pools excluded",
     },
 )
 

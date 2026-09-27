@@ -49,7 +49,8 @@ async def test_kfc_provider_normalizes_relevant_uk_leadership_jobs() -> None:
         provider = KFCUKProvider(client)
         jobs = await provider.search()
 
-    assert len(jobs) == 1
+    assert len(jobs) == 2
+    assert {j.external_id for j in jobs} == {"100", "101"}
     assert jobs[0].provider == "kfc_uk"
     assert jobs[0].external_id == "100"
     assert jobs[0].company == "KFC UK"

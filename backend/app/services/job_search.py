@@ -8,9 +8,9 @@ from urllib.parse import urlsplit, urlunsplit
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.job_providers.base import JobProvider
+from app.job_providers.base import JobProvider, NormalizedJob
 from app.job_providers.location import normalize_location
-from app.job_providers.role_filter import classify_role
+from app.job_providers.smartrecruiters import SmartRecruitersProvider
 from app.models.discovered_job import DiscoveredJob
 from app.schemas.job_search import ManualJobImport
 
@@ -220,6 +220,22 @@ async def sync_jobs(
     location: str | None,
     limit_per_provider: int,
 ) -> SyncResult:
+    # Reuse unchanged published detail, never the list of active postings.
+    for provider in providers:
+        if isinstance(provider, SmartRecruitersProvider):
+            existing = await session.scalars(
+                select(DiscoveredJob).where(DiscoveredJob.provider == provider.name)
+            )
+            provider.cached_jobs = {
+                row.external_id: NormalizedJob(
+                    **{
+                        key: getattr(row, key)
+                        for key in NormalizedJob.__dataclass_fields__
+                        if hasattr(row, key)
+                    }
+                )
+                for row in existing
+            }
     errors: dict[str, str] = {}
     provider_metrics = {
         provider.name: {"retrieved": 0, "inserted": 0, "updated": 0, "closed": 0}
@@ -240,7 +256,6 @@ async def sync_jobs(
 
     batches = await asyncio.gather(*(fetch(provider) for provider in providers))
     jobs = [job for _, batch, succeeded in batches if succeeded for job in batch]
-    jobs = [job for job in jobs if classify_role(job.title, job.description).eligible]
     for job in jobs:
         provider_metrics[job.provider]["retrieved"] += 1
 
@@ -392,7 +407,10 @@ async def sync_jobs(
         if (
             not succeeded
             or not provider.complete_snapshot
-            or not any(job.provider == provider.name for job in jobs)
+            or (
+                not any(job.provider == provider.name for job in jobs)
+                and not provider.authoritative_empty
+            )
         ):
             continue
         seen_ids = {job.external_id for job in jobs if job.provider == provider.name}
@@ -473,7 +491,7 @@ async def search_jobs(
     )
 
     rows = await session.scalars(
-        base_query.order_by(DiscoveredJob.discovered_at.desc())
+        base_query.order_by(DiscoveredJob.discovered_at.desc(), DiscoveredJob.id.desc())
         .offset((page - 1) * page_size)
         .limit(page_size)
     )

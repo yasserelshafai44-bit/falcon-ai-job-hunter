@@ -12,7 +12,6 @@ from app.job_providers.base import (
     ProviderRateLimitError,
 )
 from app.job_providers.location import normalize_location
-from app.job_providers.role_filter import classify_role
 
 
 class DeliverooProvider(JobProvider):
@@ -42,6 +41,7 @@ class DeliverooProvider(JobProvider):
         limit: int = 50,
     ) -> list[NormalizedJob]:
         self.complete_snapshot = False
+        self.authoritative_empty = False
         owns_client = self._client is None
         client = self._client or httpx.AsyncClient(
             timeout=httpx.Timeout(self.timeout_seconds, connect=10),
@@ -95,10 +95,7 @@ class DeliverooProvider(JobProvider):
                 seen_page_ids.add(page_ids)
                 for item in payload:
                     job = _normalize_job(item, retrieved_at)
-                    if (
-                        job is None
-                        or not classify_role(job.title, job.description).eligible
-                    ):
+                    if job is None:
                         continue
                     if job.external_id in seen_external_ids:
                         continue
@@ -119,7 +116,7 @@ class DeliverooProvider(JobProvider):
                         continue
                     jobs.append(job)
                     seen_external_ids.add(job.external_id)
-                    if len(jobs) >= max(1, min(limit, 500)):
+                    if len(jobs) >= max(1, min(limit, 10000)):
                         return jobs
                 if (
                     not payload
@@ -140,6 +137,7 @@ class DeliverooProvider(JobProvider):
         finally:
             if owns_client:
                 await client.aclose()
+        self.authoritative_empty = self.complete_snapshot and not jobs
         return jobs
 
 

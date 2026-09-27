@@ -340,7 +340,7 @@ async def test_frontend_is_served(client: AsyncClient) -> None:
     assert "Employer coverage" in response.text
     assert "Why this career fit" in script.text
     assert "Live vacancies" in script.text
-    assert "item.status==='LIVE'?String(item.live_vacancies??0):'—'" in script.text
+    assert "previously verified" in script.text
     assert "Role fit" in script.text
     assert "Mandatory requirements" in script.text
     assert "Remote OK — REAL vacancies" in response.text

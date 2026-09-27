@@ -39,12 +39,15 @@ async def list_employers(
     session: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> list[EmployerRegistryRead]:
     results: list[EmployerRegistryRead] = []
-    assessed_at = datetime(2026, 9, 9, tzinfo=UTC)
+    assessed_at = datetime(2026, 9, 27, tzinfo=UTC)
     for item in EMPLOYER_REGISTRY:
         provider = item["provider"]
         live_vacancies: int | None = None
         latest_refresh_vacancies: int | None = None
         last_checked_at = assessed_at
+        last_successful_refresh = None
+        latest_refresh_status = None
+        latest_refresh_error = None
         if item["status"] == "LIVE" and provider:
             live_vacancies = int(
                 await session.scalar(
@@ -66,13 +69,33 @@ async def list_employers(
             )
             if refresh:
                 latest_refresh_vacancies = refresh.jobs_retrieved
-                last_checked_at = refresh.completed_at
+                last_successful_refresh = refresh.completed_at
+            latest = await session.scalar(
+                select(ProviderRefreshRun)
+                .where(ProviderRefreshRun.provider == provider)
+                .order_by(ProviderRefreshRun.completed_at.desc())
+                .limit(1)
+            )
+            if latest:
+                last_checked_at = latest.completed_at
+                latest_refresh_status = latest.status
+                if latest.status != "completed":
+                    latest_refresh_error = str(
+                        latest.failures.get("message") or "Latest refresh failed"
+                    )
+            else:
+                last_checked_at = None
+            if not refresh and live_vacancies == 0:
+                live_vacancies = None
         results.append(
             EmployerRegistryRead(
                 **item,
                 live_vacancies=live_vacancies,
                 latest_refresh_vacancies=latest_refresh_vacancies,
                 last_checked_at=last_checked_at,
+                last_successful_refresh=last_successful_refresh,
+                latest_refresh_status=latest_refresh_status,
+                latest_refresh_error=latest_refresh_error,
             )
         )
     return results
@@ -161,46 +184,18 @@ async def list_job_providers(
             kind="demo",
             credentials_required=False,
         ),
-        JobProviderRead(
-            id="deliveroo",
-            name="Deliveroo Careers",
-            kind="real",
-            credentials_required=False,
-            source_url="https://careers.deliveroo.co.uk",
-            recommended_refresh_minutes=settings.real_job_refresh_minutes,
-        ),
-        JobProviderRead(
-            id="kfc_uk",
-            name="KFC UK Careers",
-            kind="real",
-            credentials_required=False,
-            source_url="https://careers.kfc.co.uk",
-            recommended_refresh_minutes=settings.real_job_refresh_minutes,
-        ),
-        JobProviderRead(
-            id="raising_canes_uk",
-            name="Raising Cane's UK Careers",
-            kind="real",
-            credentials_required=False,
-            source_url="https://jobs.raisingcanes.co.uk/",
-            recommended_refresh_minutes=settings.real_job_refresh_minutes,
-        ),
-        JobProviderRead(
-            id="wsh_group_uk",
-            name="WSH Group UK Careers",
-            kind="real",
-            credentials_required=False,
-            source_url="https://careers.wshgroup.co.uk/",
-            recommended_refresh_minutes=settings.real_job_refresh_minutes,
-        ),
-        JobProviderRead(
-            id="greene_king_uk",
-            name="Greene King UK Operations Careers",
-            kind="real",
-            credentials_required=False,
-            source_url="https://jobs.greeneking.co.uk/",
-            recommended_refresh_minutes=settings.real_job_refresh_minutes,
-        ),
+        *[
+            JobProviderRead(
+                id=e["provider"],
+                name=e["employer"],
+                kind="real",
+                credentials_required=False,
+                source_url=e["careers_url"],
+                recommended_refresh_minutes=settings.real_job_refresh_minutes,
+            )
+            for e in EMPLOYER_REGISTRY
+            if e["status"] == "LIVE" and e["provider"]
+        ],
         JobProviderRead(
             id="manual_official",
             name="Manual official vacancy",
@@ -273,28 +268,33 @@ async def synchronize_jobs(
         limit_per_provider=payload.limit_per_provider,
     )
     if payload.candidate_analysis_id is not None:
-        jobs, _ = await search_jobs(
-            session=session,
-            keyword=payload.keyword,
-            location=payload.location,
-            remote=None,
-            provider=None,
-            active_only=True,
-            page=1,
-            page_size=500,
-        )
-        for job in jobs:
-            if job.provider not in requested_providers:
-                continue
-            try:
-                await calculate_and_persist_match(
-                    session=session,
-                    user_id=_user.id,
-                    candidate_analysis_id=payload.candidate_analysis_id,
-                    job_id=job.id,
-                )
-            except ValueError:
-                continue
+        page = 1
+        while True:
+            jobs, total = await search_jobs(
+                session=session,
+                keyword=payload.keyword,
+                location=payload.location,
+                remote=None,
+                provider=None,
+                active_only=True,
+                page=page,
+                page_size=500,
+            )
+            for job in jobs:
+                if job.provider not in requested_providers:
+                    continue
+                try:
+                    await calculate_and_persist_match(
+                        session=session,
+                        user_id=_user.id,
+                        candidate_analysis_id=payload.candidate_analysis_id,
+                        job_id=job.id,
+                    )
+                except ValueError:
+                    continue
+            if page * 500 >= total:
+                break
+            page += 1
     runs = await record_refresh_runs(
         session,
         user_id=_user.id,
