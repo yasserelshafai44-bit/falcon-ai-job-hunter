@@ -10,6 +10,7 @@ async def test_refresh_ui_has_visible_progress_and_error_contract(
     script = await client.get("/assets/app.js")
 
     assert page.status_code == 200
+    assert '/assets/app.js?v=20260928-ranking-timeout' in page.text
     assert 'id="refreshRankJobs"' in page.text
     assert 'id="jobRefreshStatus" role="status" aria-live="polite"' in page.text
     assert "setJobRefreshState('Contacting verified employers" in script.text
@@ -21,6 +22,7 @@ async def test_refresh_ui_has_visible_progress_and_error_contract(
     assert "new AbortController()" in script.text
     assert "Ranking timed out after 2 minutes" in script.text
     assert "Try a narrower employer selection or retry" in script.text
+    assert "loadEmployerRegistry(controller.signal)" in script.text
     assert 'id="clearJobFilters"' in page.text
     assert 'id="jobFilterSummary"' in page.text
     assert "function applyJobFilters()" in script.text
