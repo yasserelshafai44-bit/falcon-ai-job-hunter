@@ -42,6 +42,11 @@ class ScoreJobRequest(BaseModel):
     candidate_analysis_id: int
 
 
+class ScoreJobsBatchRequest(BaseModel):
+    candidate_analysis_id: int
+    job_ids: list[int] = Field(min_length=1, max_length=100)
+
+
 class RecalculateMatchesRequest(BaseModel):
     candidate_analysis_id: int
     job_ids: list[int] = Field(default_factory=list, max_length=250)

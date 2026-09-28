@@ -2,16 +2,18 @@ import asyncio
 import hashlib
 import re
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from urllib.parse import urlsplit, urlunsplit
 
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import get_settings
 from app.job_providers.base import JobProvider, NormalizedJob
 from app.job_providers.location import normalize_location
 from app.job_providers.smartrecruiters import SmartRecruitersProvider
 from app.models.discovered_job import DiscoveredJob
+from app.models.provider_refresh_run import ProviderRefreshRun
 from app.schemas.job_search import ManualJobImport
 
 
@@ -210,6 +212,7 @@ class SyncResult:
     closed: int
     errors: dict[str, str]
     provider_metrics: dict[str, dict[str, int]]
+    skipped_providers: list[str]
 
 
 async def sync_jobs(
@@ -237,6 +240,25 @@ async def sync_jobs(
                 for row in existing
             }
     errors: dict[str, str] = {}
+    settings = get_settings()
+    cutoff = datetime.now(UTC) - timedelta(minutes=settings.real_job_refresh_minutes)
+    fresh_providers = set(
+        await session.scalars(
+            select(ProviderRefreshRun.provider)
+            .where(
+                ProviderRefreshRun.provider.in_(
+                    [provider.name for provider in providers]
+                ),
+                ProviderRefreshRun.status == "completed",
+                ProviderRefreshRun.jobs_retrieved > 0,
+                ProviderRefreshRun.completed_at >= cutoff,
+            )
+            .distinct()
+        )
+    )
+    providers_to_fetch = [
+        provider for provider in providers if provider.name not in fresh_providers
+    ]
     provider_metrics = {
         provider.name: {"retrieved": 0, "inserted": 0, "updated": 0, "closed": 0}
         for provider in providers
@@ -264,7 +286,9 @@ async def sync_jobs(
             errors[provider.name] = str(exc)[:240] or "Provider request failed"
             return provider, [], False
 
-    batches = await asyncio.gather(*(fetch(provider) for provider in providers))
+    batches = await asyncio.gather(
+        *(fetch(provider) for provider in providers_to_fetch)
+    )
     jobs = [job for _, batch, succeeded in batches if succeeded for job in batch]
     for job in jobs:
         provider_metrics[job.provider]["retrieved"] += 1
@@ -456,6 +480,7 @@ async def sync_jobs(
         closed=closed,
         errors=errors,
         provider_metrics=provider_metrics,
+        skipped_providers=sorted(fresh_providers),
     )
 
 

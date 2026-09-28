@@ -125,6 +125,98 @@ async def calculate_and_persist_match(
     return to_match_read(record)
 
 
+async def calculate_and_persist_matches(
+    *,
+    session: AsyncSession,
+    user_id: int,
+    candidate_analysis_id: int,
+    job_ids: list[int],
+) -> list[JobMatchRead]:
+    """Score a bounded batch while reusing candidate context and one commit."""
+    analysis = await session.scalar(
+        select(CandidateAnalysis).where(
+            CandidateAnalysis.id == candidate_analysis_id,
+            CandidateAnalysis.user_id == user_id,
+        )
+    )
+    if analysis is None:
+        raise MatchingInputError("Candidate analysis not found")
+
+    candidate_evidence = dict(analysis.analysis_data)
+    candidate_evidence["source_text"] = analysis.extracted_text
+    candidate_evidence = await enrich_analysis_with_profile(
+        session, user_id, candidate_evidence
+    )
+    unique_ids = list(dict.fromkeys(job_ids))
+    jobs = list(
+        await session.scalars(
+            select(DiscoveredJob).where(DiscoveredJob.id.in_(unique_ids))
+        )
+    )
+    jobs_by_id = {job.id: job for job in jobs}
+    existing = list(
+        await session.scalars(
+            select(JobMatch).where(
+                JobMatch.user_id == user_id,
+                JobMatch.candidate_analysis_id == candidate_analysis_id,
+                JobMatch.job_id.in_(unique_ids),
+            )
+        )
+    )
+    existing_by_job = {record.job_id: record for record in existing}
+    for job_id in unique_ids:
+        job = jobs_by_id.get(job_id)
+        if job is None:
+            continue
+        score = score_candidate_against_job(
+            candidate_analysis=candidate_evidence,
+            job=JobInput(
+                title=job.title,
+                company=job.company,
+                location=job.location,
+                description=job.description,
+                remote=job.remote,
+                workplace_type=job.workplace_type,
+                requirements=tuple(job.requirements or []),
+                salary_min=job.salary_min,
+                salary_max=job.salary_max,
+                currency=job.currency,
+            ),
+        )
+        payload = score.model_dump(mode="json")
+        evidence = payload.pop("evidence")
+        payload.pop("career_fit_score")
+        payload.pop("location_fit")
+        payload.pop("location_fit_explanation")
+        record = existing_by_job.get(job_id)
+        if record is None:
+            record = JobMatch(
+                user_id=user_id,
+                candidate_analysis_id=candidate_analysis_id,
+                job_id=job_id,
+                evidence=evidence,
+                **payload,
+            )
+            session.add(record)
+            existing_by_job[job_id] = record
+        else:
+            for field, value in payload.items():
+                setattr(record, field, value)
+            record.evidence = evidence
+
+    await session.commit()
+    records = list(
+        await session.scalars(
+            select(JobMatch).where(
+                JobMatch.user_id == user_id,
+                JobMatch.candidate_analysis_id == candidate_analysis_id,
+                JobMatch.job_id.in_(unique_ids),
+            )
+        )
+    )
+    return [to_match_read(record) for record in records]
+
+
 async def list_matches(
     *,
     session: AsyncSession,

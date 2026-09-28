@@ -42,6 +42,9 @@ async def test_refresh_ui_uses_server_resolved_all_and_individual_providers(
     assert '<option value="deliveroo">' in page.text
     assert "const refreshedProviders=sync.providers_requested||[]" in script.text
     assert "const persisted=await request('/matches',{signal:controller.signal})" in script.text
+    assert "request('/matches/jobs/score-batch'" in script.text
+    assert "batchSize=50" in script.text
+    assert "maxBatchConcurrency=4" in script.text
     assert "jobs.map(job=>request(`/matches/jobs/" not in script.text
 
 

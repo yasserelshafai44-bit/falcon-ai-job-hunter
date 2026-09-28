@@ -12,15 +12,34 @@ from app.schemas.job_matching import (
     RecalculateMatchesRequest,
     RecalculateMatchesResponse,
     ScoreJobRequest,
+    ScoreJobsBatchRequest,
 )
 from app.services.matching_engine import (
     MatchingInputError,
     calculate_and_persist_match,
+    calculate_and_persist_matches,
     get_match,
     list_matches,
 )
 
 router = APIRouter(prefix="/matches", tags=["matches"])
+
+
+@router.post("/jobs/score-batch", response_model=list[JobMatchRead])
+async def score_jobs_batch(
+    payload: ScoreJobsBatchRequest,
+    user: Annotated[User, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db_session)],
+) -> list[JobMatchRead]:
+    try:
+        return await calculate_and_persist_matches(
+            session=session,
+            user_id=user.id,
+            candidate_analysis_id=payload.candidate_analysis_id,
+            job_ids=payload.job_ids,
+        )
+    except MatchingInputError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 @router.post("/jobs/{job_id}/score", response_model=JobMatchRead)

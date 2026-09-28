@@ -299,7 +299,11 @@ async def synchronize_jobs(
         session,
         user_id=_user.id,
         result=result,
-        providers=requested_providers,
+        providers=[
+            provider
+            for provider in requested_providers
+            if provider not in result.skipped_providers
+        ],
         candidate_analysis_id=payload.candidate_analysis_id,
         started_at=started_at,
     )

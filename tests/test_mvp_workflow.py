@@ -102,6 +102,14 @@ async def test_local_end_to_end_workflow(
     assert 0 <= matched.json()["overall_score"] <= 100
     assert matched.json()["evidence"]
 
+    batched = await client.post(
+        "/api/v1/matches/jobs/score-batch",
+        headers=headers,
+        json={"candidate_analysis_id": analysis_id, "job_ids": [job_id]},
+    )
+    assert batched.status_code == 200
+    assert batched.json()[0]["job_id"] == job_id
+
     documents = []
     for endpoint in ("resume", "cover-letter"):
         generated = await client.post(
