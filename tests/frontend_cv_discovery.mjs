@@ -18,7 +18,7 @@ const background=new Promise((resolve,reject)=>{rejectApplications=reject});
 const context=vm.createContext({
   $:control,FormData,URLSearchParams,
   localStorage:{getItem:()=> 'authenticated-user-token',removeItem(){}},
-  notice:()=>{},setTimeout:()=>{},escapeHtml:String,evidenceList:items=>JSON.stringify(items),
+  notice:()=>{},setTimeout:()=>{},clearTimeout:()=>{},escapeHtml:String,evidenceList:items=>JSON.stringify(items),
   loadApplications:()=>background,loadProfile:async()=>{},loadPreferences:async()=>{},
   loadCalibration:async()=>{},loadEmployerRegistry:async()=>{},
   selectedProviders:()=>['local'],setJobRefreshState:()=>{},
@@ -41,7 +41,8 @@ const prefixes=["const api=",'async function request(', 'function lock(',
   'function evidenceValue(', 'function analysisGroup(', 'function renderAnalysis(',
   'async function restoreCandidateAnalysis(', 'async function unlock(',
   "$('cvForm').addEventListener(","$('jobForm').addEventListener(",
-  'let currentRankedJobs=', 'let lastResolvedDirectProviders='];
+  'let currentRankedJobs=', 'let lastResolvedDirectProviders=',
+  'const RANKING_TIMEOUT_MS=', 'const newRankingController='];
 vm.runInContext(source.split('\n').filter(line=>prefixes.some(p=>line.startsWith(p))).join('\n'),context);
 const run=code=>vm.runInContext(code,context);
 

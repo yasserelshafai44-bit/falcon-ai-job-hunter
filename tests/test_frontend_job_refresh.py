@@ -17,6 +17,10 @@ async def test_refresh_ui_has_visible_progress_and_error_contract(
     assert "Unable to refresh and rank jobs:" in script.text
     assert "No current vacancies were returned" in script.text
     assert "Promise.allSettled" in script.text
+    assert "const RANKING_TIMEOUT_MS=120000" in script.text
+    assert "new AbortController()" in script.text
+    assert "Ranking timed out after 2 minutes" in script.text
+    assert "Try a narrower employer selection or retry" in script.text
     assert 'id="clearJobFilters"' in page.text
     assert 'id="jobFilterSummary"' in page.text
     assert "function applyJobFilters()" in script.text
@@ -35,7 +39,7 @@ async def test_refresh_ui_uses_server_resolved_all_and_individual_providers(
     assert '<option value="all_verified_direct">' in page.text
     assert '<option value="deliveroo">' in page.text
     assert "const refreshedProviders=sync.providers_requested||[]" in script.text
-    assert "const persisted=await request('/matches')" in script.text
+    assert "const persisted=await request('/matches',{signal:controller.signal})" in script.text
     assert "jobs.map(job=>request(`/matches/jobs/" not in script.text
 
 
