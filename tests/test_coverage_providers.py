@@ -114,6 +114,9 @@ def domino_page(expiry="2099-12-31"):
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
+    "sitemap_host", ["jobs.dominos.co.uk", "dominosweb.eploy.net", "unrelated.example"]
+)
+@pytest.mark.parametrize(
     "count,robots,fails",
     [
         (1, "User-agent: *\nAllow: /", False),
@@ -121,10 +124,15 @@ def domino_page(expiry="2099-12-31"):
         (1, "User-agent: *\nDisallow: /", True),
     ],
 )
-async def test_dominos_published_sitemap_and_permission_guards(count, robots, fails):
+async def test_dominos_published_sitemap_and_permission_guards(
+    count, robots, fails, sitemap_host
+):
     url = DominosUKProvider.root + "/vacancies/722/finance.html"
+    sitemap_posting = "https://" + sitemap_host + "/vacancies/722/finance.html"
+    fails = fails or sitemap_host == "unrelated.example"
 
     def handler(request):
+        assert request.url.host == "jobs.dominos.co.uk"
         path = request.url.path
         if path == "/robots.txt":
             text = robots
@@ -133,7 +141,7 @@ async def test_dominos_published_sitemap_and_permission_guards(count, robots, fa
         elif path.endswith(".xml"):
             text = (
                 '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
-                f"<url><loc>{url}</loc></url></urlset>"
+                f"<url><loc>{sitemap_posting}</loc></url></urlset>"
             )
         else:
             text = domino_page()

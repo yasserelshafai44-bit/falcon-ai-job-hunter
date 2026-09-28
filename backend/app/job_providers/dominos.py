@@ -64,7 +64,8 @@ class DominosUKProvider(JobProvider):
                     u
                     for u in links
                     if (
-                        urlsplit(u).hostname != "jobs.dominos.co.uk"
+                        urlsplit(u).hostname
+                        not in {"jobs.dominos.co.uk", "dominosweb.eploy.net"}
                         or not re.match(r"/vacancies/\d+/", urlsplit(u).path)
                     )
                 ),
@@ -76,6 +77,10 @@ class DominosUKProvider(JobProvider):
                     f"host={urlsplit(unexpected).hostname!r}, "
                     f"path={urlsplit(unexpected).path[:160]!r}"
                 )
+            # Eploy sometimes emits its tenant hostname in the official sitemap.
+            # That tenant's robots.txt points back to jobs.dominos.co.uk/sitemap.xml.
+            # Use the public employer URL for the same posting, never arbitrary hosts.
+            links = sorted({self.root + urlsplit(u).path for u in links})
             if not count or int(count[1]) != len(links):
                 raise ProviderError(
                     "Domino's listing count changed or pagination is incomplete"
