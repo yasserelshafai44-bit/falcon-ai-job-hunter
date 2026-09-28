@@ -14,12 +14,15 @@ from app.services.match_scoring import classify_occupational_family
 
 async def _family_distribution(jobs) -> Counter:
     """Keep health/login requests responsive while summarising large feeds."""
-    counts = Counter()
-    for index, job in enumerate(jobs, 1):
-        counts[classify_occupational_family(job.title, job.description)] += 1
-        if index % 20 == 0:
-            await asyncio.sleep(0)
-    return counts
+    distinct = Counter((job.title, job.description) for job in jobs)
+
+    def classify():
+        counts = Counter()
+        for (title, description), vacancies in distinct.items():
+            counts[classify_occupational_family(title, description)] += vacancies
+        return counts
+
+    return await asyncio.to_thread(classify)
 
 
 async def record_refresh_runs(
@@ -36,14 +39,14 @@ async def record_refresh_runs(
         metrics = result.provider_metrics.get(
             provider, {"retrieved": 0, "inserted": 0, "updated": 0, "closed": 0}
         )
-        jobs = list(
-            await session.scalars(
-                select(DiscoveredJob).where(
+        jobs = (
+            await session.execute(
+                select(DiscoveredJob.title, DiscoveredJob.description).where(
                     DiscoveredJob.provider == provider,
                     DiscoveredJob.is_active.is_(True),
                 )
             )
-        )
+        ).all()
         family_distribution = await _family_distribution(jobs)
         score_distribution: dict[str, int] = {}
         recommendation_distribution: dict[str, int] = {}
