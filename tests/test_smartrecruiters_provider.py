@@ -1,3 +1,4 @@
+import asyncio
 import json
 
 import httpx
@@ -178,3 +179,27 @@ async def test_smartrecruiters_repeated_page_is_rejected() -> None:
         provider.page_size = 1
         with pytest.raises(ProviderError, match="repeated"):
             await provider.search()
+
+
+@pytest.mark.asyncio
+async def test_smartrecruiters_has_hard_aggregate_deadline_for_large_detail_phase():
+    async def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path.endswith("/postings"):
+            return httpx.Response(
+                200, json={"totalFound": 1, "content": [{"id": "slow"}]}
+            )
+        await asyncio.sleep(1)
+        return httpx.Response(200, json=detail("slow"))
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        provider = RaisingCanesUKProvider(
+            client=client,
+            overall_timeout_seconds=0.05,
+            timeout_seconds=1,
+        )
+        started = asyncio.get_running_loop().time()
+        with pytest.raises(ProviderError, match="deadline"):
+            await provider.search()
+        assert asyncio.get_running_loop().time() - started < 0.5
+        assert provider.complete_snapshot is False
+        assert provider.authoritative_empty is False

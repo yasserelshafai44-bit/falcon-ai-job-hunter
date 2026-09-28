@@ -39,6 +39,7 @@ class JobProvider(ABC):
     is_demo: bool = False
     complete_snapshot: bool = False
     authoritative_empty: bool = False
+    refresh_timeout_seconds: float = 600
 
     @abstractmethod
     async def search(

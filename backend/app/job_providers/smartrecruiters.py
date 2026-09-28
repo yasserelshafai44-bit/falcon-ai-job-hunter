@@ -22,7 +22,9 @@ class SmartRecruitersProvider(JobProvider):
     api_root = "https://api.smartrecruiters.com/v1/companies"
     page_size = 100
     max_pages = 100
-    max_detail_concurrency = 5
+    max_detail_concurrency = 20
+    overall_timeout_seconds = 300
+    refresh_timeout_seconds = 330
     complete_snapshot = False
 
     def __init__(
@@ -37,6 +39,7 @@ class SmartRecruitersProvider(JobProvider):
         client: httpx.AsyncClient | None = None,
         api_root: str | None = None,
         timeout_seconds: float = 20,
+        overall_timeout_seconds: float | None = None,
     ) -> None:
         self.name = name
         self.display_name = display_name
@@ -47,6 +50,12 @@ class SmartRecruitersProvider(JobProvider):
         self._client = client
         self.api_root = (api_root or self.api_root).rstrip("/")
         self.timeout_seconds = timeout_seconds
+        self.overall_timeout_seconds = (
+            overall_timeout_seconds
+            if overall_timeout_seconds is not None
+            else self.overall_timeout_seconds
+        )
+        self.refresh_timeout_seconds = self.overall_timeout_seconds + 30
         self.cached_jobs: dict[str, NormalizedJob] = {}
 
     @property
@@ -54,6 +63,27 @@ class SmartRecruitersProvider(JobProvider):
         return f"{self.api_root}/{self.company_identifier}/postings"
 
     async def search(
+        self,
+        *,
+        keyword: str | None = None,
+        location: str | None = None,
+        limit: int = 200,
+    ) -> list[NormalizedJob]:
+        """Search with a hard aggregate deadline for the whole employer feed."""
+        try:
+            return await asyncio.wait_for(
+                self._search(keyword=keyword, location=location, limit=limit),
+                timeout=self.overall_timeout_seconds,
+            )
+        except TimeoutError as exc:
+            self.complete_snapshot = False
+            self.authoritative_empty = False
+            raise ProviderError(
+                f"{self.display_name} refresh exceeded "
+                f"{self.overall_timeout_seconds:.0f}-second deadline"
+            ) from exc
+
+    async def _search(
         self,
         *,
         keyword: str | None = None,

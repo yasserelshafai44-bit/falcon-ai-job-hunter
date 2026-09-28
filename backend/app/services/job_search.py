@@ -244,12 +244,22 @@ async def sync_jobs(
 
     async def fetch(provider: JobProvider):
         try:
-            jobs = await provider.search(
-                keyword=keyword,
-                location=location,
-                limit=limit_per_provider,
+            jobs = await asyncio.wait_for(
+                provider.search(
+                    keyword=keyword,
+                    location=location,
+                    limit=limit_per_provider,
+                ),
+                timeout=getattr(provider, "refresh_timeout_seconds", 600),
             )
             return provider, jobs, True
+        except TimeoutError:
+            errors[provider.name] = (
+                f"{provider.name} refresh exceeded "
+                f"{getattr(provider, 'refresh_timeout_seconds', 600):.0f}-second "
+                "deadline"
+            )
+            return provider, [], False
         except Exception as exc:
             errors[provider.name] = str(exc)[:240] or "Provider request failed"
             return provider, [], False
