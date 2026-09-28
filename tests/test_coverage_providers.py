@@ -163,6 +163,36 @@ async def test_dominos_published_sitemap_and_permission_guards(
             assert provider.complete_snapshot
 
 
+@pytest.mark.asyncio
+async def test_dominos_reconciles_removed_sitemap_posting_against_live_count():
+    url = DominosUKProvider.root + "/vacancies/722/finance.html"
+
+    def handler(request):
+        if request.url.path == "/robots.txt":
+            return httpx.Response(200, text="User-agent: *\nAllow: /")
+        if request.url.path.endswith(".aspx"):
+            return httpx.Response(200, text="<title>1 Vacancies</title>")
+        if request.url.path.endswith(".xml"):
+            return httpx.Response(
+                200,
+                text=(
+                    '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
+                    f"<url><loc>{url}</loc></url>"
+                    f"<url><loc>{DominosUKProvider.root}/vacancies/999/removed.html</loc></url>"
+                    "</urlset>"
+                ),
+            )
+        if request.url.path.endswith("removed.html"):
+            return httpx.Response(410)
+        return httpx.Response(200, text=domino_page())
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        provider = DominosUKProvider(client=client)
+        jobs = await provider.search()
+        assert [job.external_id for job in jobs] == ["722"]
+        assert provider.complete_snapshot
+
+
 def test_dominos_expired_and_missing_structured_data():
     provider = DominosUKProvider()
     url = provider.root + "/vacancies/722/finance.html"

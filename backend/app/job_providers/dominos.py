@@ -81,10 +81,6 @@ class DominosUKProvider(JobProvider):
             # That tenant's robots.txt points back to jobs.dominos.co.uk/sitemap.xml.
             # Use the public employer URL for the same posting, never arbitrary hosts.
             links = sorted({self.root + urlsplit(u).path for u in links})
-            if not count or int(count[1]) != len(links):
-                raise ProviderError(
-                    "Domino's listing count changed or pagination is incomplete"
-                )
             jobs = []
             # Low request rate, with any declared crawl delay honoured.
             delay = max(0.2, robots.crawl_delay("FalconAIJobHunter") or 0)
@@ -101,6 +97,10 @@ class DominosUKProvider(JobProvider):
                 job = self._normalize(response.text, url)
                 if job is not None:
                     jobs.append(job)
+            if not count or int(count[1]) != len(jobs):
+                raise ProviderError(
+                    "Domino's listing count changed or pagination is incomplete"
+                )
         except (
             httpx.HTTPError,
             ValueError,
