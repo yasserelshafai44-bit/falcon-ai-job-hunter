@@ -261,7 +261,14 @@ async def synchronize_jobs(
             status_code=422, detail="No supported job providers requested"
         )
     if not payload.refresh:
-        return JobSyncResponse(providers_requested=requested_providers)
+        return JobSyncResponse(
+            providers_requested=requested_providers,
+            discovered=0,
+            inserted=0,
+            updated=0,
+            duplicates=0,
+            closed=0,
+        )
     result = await sync_jobs(
         session=session,
         providers=providers,
