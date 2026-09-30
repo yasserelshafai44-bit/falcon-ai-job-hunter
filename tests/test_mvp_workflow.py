@@ -89,6 +89,14 @@ async def test_local_end_to_end_workflow(
     assert synced.status_code == 200
     assert synced.json()["inserted"] == 3
 
+    rankable = await client.get(
+        "/api/v1/jobs/rankable",
+        headers=headers,
+        params={"providers": "local", "page_size": 10000},
+    )
+    assert rankable.status_code == 200
+    assert rankable.json()["total"] == 3
+
     jobs = await client.get("/api/v1/jobs", headers=headers)
     assert jobs.status_code == 200
     job_id = jobs.json()["items"][0]["id"]

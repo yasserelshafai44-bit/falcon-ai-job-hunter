@@ -29,6 +29,7 @@ from app.schemas.job_search import (
 from app.services.job_search import get_job, import_manual_job, search_jobs, sync_jobs
 from app.services.matching_engine import calculate_and_persist_match
 from app.services.provider_monitoring import record_refresh_runs
+from app.job_providers.role_filter import classify_role
 
 router = APIRouter(prefix="/jobs", tags=["jobs"])
 
@@ -230,6 +231,38 @@ async def list_jobs(
     return JobSearchResponse(
         items=[JobRead.model_validate(item) for item in items],
         total=total,
+        page=page,
+        page_size=page_size,
+    )
+
+
+@router.get("/rankable", response_model=JobSearchResponse)
+async def list_rankable_jobs(
+    _user: Annotated[User, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_db_session)],
+    providers: str,
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=10000, ge=1, le=10000),
+) -> JobSearchResponse:
+    provider_names = [item.strip() for item in providers.split(",") if item.strip()]
+    rows = list(
+        await session.scalars(
+            select(DiscoveredJob)
+            .where(
+                DiscoveredJob.is_active.is_(True),
+                DiscoveredJob.provider.in_(provider_names),
+            )
+            .order_by(DiscoveredJob.discovered_at.desc(), DiscoveredJob.id.desc())
+        )
+    )
+    eligible = [
+        job for job in rows if classify_role(job.title, job.description).eligible
+    ]
+    start = (page - 1) * page_size
+    items = eligible[start : start + page_size]
+    return JobSearchResponse(
+        items=[JobRead.model_validate(item) for item in items],
+        total=len(eligible),
         page=page,
         page_size=page_size,
     )
