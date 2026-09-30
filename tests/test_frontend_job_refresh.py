@@ -10,7 +10,7 @@ async def test_refresh_ui_has_visible_progress_and_error_contract(
     script = await client.get("/assets/app.js")
 
     assert page.status_code == 200
-    assert '/assets/app.js?v=20260928-ranking-timeout' in page.text
+    assert '/assets/app.js?v=20260930-ranking-batch' in page.text
     assert 'id="refreshRankJobs"' in page.text
     assert 'id="jobRefreshStatus" role="status" aria-live="polite"' in page.text
     assert "setJobRefreshState('Loading current vacancies" in script.text
