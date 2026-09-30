@@ -503,11 +503,23 @@ def _role_family(title: str, description: str) -> str:
     # A neutral General Manager title can describe a regional commercial
     # executive role rather than a site operator. The remit must establish
     # that distinction; the title alone is insufficient.
-    if "general manager" in folded and re.search(
-        r"commercial performance|commercial growth|new business|account management|"
-        r"enterprise opportunities|partnerships|regional pipeline|forecasting|"
-        r"b2b saas|go-to-market",
-        description_folded,
+    commercial_markers = (
+        "commercial performance",
+        "commercial growth",
+        "new business",
+        "account management",
+        "enterprise opportunities",
+        "regional pipeline",
+        "forecasting",
+        "b2b saas",
+        "go-to-market",
+    )
+    commercial_signal_count = sum(
+        marker in description_folded for marker in commercial_markers
+    )
+    if "general manager" in folded and (
+        re.search(r"b2b saas|enterprise opportunities|regional pipeline|go-to-market", description_folded)
+        or commercial_signal_count >= 3
     ):
         return "commercial_operations"
     # Micro-fulfilment Site Leader is warehouse/last-mile operations, not a

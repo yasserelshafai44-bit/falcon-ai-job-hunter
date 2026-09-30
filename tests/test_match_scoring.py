@@ -427,6 +427,19 @@ def test_corporate_general_manager_is_commercial_when_remit_is_commercial() -> N
     assert result.occupational_family == "commercial_operations"
 
 
+def test_restaurant_general_manager_is_not_promoted_by_generic_partnership_text() -> None:
+    result = score_candidate_against_job(
+        candidate_analysis=candidate(),
+        job=job(
+            "Restaurant Leader (General Manager)",
+            "Lead one restaurant team, deliver great guest service and build strong "
+            "partnerships with the local community.",
+        ),
+    )
+
+    assert result.occupational_family == "retail_site"
+
+
 def test_micro_fulfilment_site_leader_is_warehouse_operations() -> None:
     result = score_candidate_against_job(
         candidate_analysis=candidate(),
