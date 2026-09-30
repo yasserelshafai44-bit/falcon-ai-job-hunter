@@ -32,6 +32,7 @@ const context=vm.createContext({
     if(url==='/api/v1/candidate-intelligence/cvs/12/analyze')persisted=true;
     if(url.startsWith('/api/v1/candidate-intelligence/'))return {ok:true,json:async()=>analysis};
     if(url==='/api/v1/jobs/sync')return {ok:true,json:async()=>({providers_requested:['local']})};
+    if(url.startsWith('/api/v1/jobs/rankable'))return {ok:true,json:async()=>({items:[{id:91}]})};
     if(url==='/api/v1/matches/jobs/score-batch')return {ok:true,json:async()=>[{job_id:91,candidate_analysis_id:37,overall_score:80}]};
     if(url==='/api/v1/matches')return {ok:true,json:async()=>({items:[]})};
     throw new Error(`Unexpected API request ${url}`);
