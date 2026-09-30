@@ -485,6 +485,7 @@ def _explicit_general_manager_scope(title: str, description: str) -> bool:
 
 def _role_family(title: str, description: str) -> str:
     folded = title.casefold()
+    description_folded = description.casefold()
     specialist = specialist_identity(title, description)
     if specialist:
         return specialist
@@ -499,6 +500,24 @@ def _role_family(title: str, description: str) -> str:
         r"(?:channel|queue|agent|contact.centre|call.centre)", description, re.I
     ):
         return "customer_operations"
+    # A neutral General Manager title can describe a regional commercial
+    # executive role rather than a site operator. The remit must establish
+    # that distinction; the title alone is insufficient.
+    if "general manager" in folded and re.search(
+        r"commercial performance|commercial growth|new business|account management|"
+        r"enterprise opportunities|partnerships|regional pipeline|forecasting|"
+        r"b2b saas|go-to-market",
+        description_folded,
+    ):
+        return "commercial_operations"
+    # Micro-fulfilment Site Leader is warehouse/last-mile operations, not a
+    # restaurant or generic multi-site operations role.
+    if re.search(r"\bsite leader\b", folded) and re.search(
+        r"micro[ -]fulfilment|order fulfilment|fulfilment centre|warehouse|"
+        r"inventory management|last[ -]mile",
+        description_folded,
+    ):
+        return "warehouse_operations"
     for family, patterns in _SPECIALIST_ROLES:
         if _contains(folded, patterns):
             return family

@@ -411,3 +411,30 @@ def test_general_manager_experience_requirement_does_not_invent_role_scope() -> 
     assert result.occupational_family == "retail_site"
     assert result.career_fit_score <= 59
     assert result.recommendation.value not in {"strong_apply", "apply"}
+
+
+def test_corporate_general_manager_is_commercial_when_remit_is_commercial() -> None:
+    result = score_candidate_against_job(
+        candidate_analysis=candidate(),
+        job=job(
+            "General Manager, UK & Ireland",
+            "Lead commercial performance and market strategy across the region. "
+            "Own new business, account management, partnerships, enterprise "
+            "opportunities, pipeline and forecasting for a B2B SaaS business.",
+        ),
+    )
+
+    assert result.occupational_family == "commercial_operations"
+
+
+def test_micro_fulfilment_site_leader_is_warehouse_operations() -> None:
+    result = score_candidate_against_job(
+        candidate_analysis=candidate(),
+        job=job(
+            "Site Leader",
+            "Lead a micro-fulfilment centre. Own order fulfilment, inventory "
+            "management, warehouse safety and last-mile customer delivery.",
+        ),
+    )
+
+    assert result.occupational_family == "warehouse_operations"
