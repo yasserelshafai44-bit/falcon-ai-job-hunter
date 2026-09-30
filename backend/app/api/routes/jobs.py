@@ -260,6 +260,8 @@ async def synchronize_jobs(
         raise HTTPException(
             status_code=422, detail="No supported job providers requested"
         )
+    if not payload.refresh:
+        return JobSyncResponse(providers_requested=requested_providers)
     result = await sync_jobs(
         session=session,
         providers=providers,

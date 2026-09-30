@@ -46,6 +46,7 @@ class JobSyncRequest(BaseModel):
     providers: list[str] = Field(default_factory=lambda: ["remoteok"])
     limit_per_provider: int = Field(default=10000, ge=1, le=10000)
     candidate_analysis_id: int | None = None
+    refresh: bool = True
 
 
 class JobSyncResponse(BaseModel):

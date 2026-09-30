@@ -13,7 +13,7 @@ async def test_refresh_ui_has_visible_progress_and_error_contract(
     assert '/assets/app.js?v=20260928-ranking-timeout' in page.text
     assert 'id="refreshRankJobs"' in page.text
     assert 'id="jobRefreshStatus" role="status" aria-live="polite"' in page.text
-    assert "setJobRefreshState('Contacting verified employers" in script.text
+    assert "setJobRefreshState('Loading current vacancies" in script.text
     assert "Your session expired. Please sign in again" in script.text
     assert "Unable to refresh and rank jobs:" in script.text
     assert "No current vacancies were returned" in script.text
@@ -41,6 +41,7 @@ async def test_refresh_ui_uses_server_resolved_all_and_individual_providers(
     assert '<option value="all_verified_direct">' in page.text
     assert '<option value="deliveroo">' in page.text
     assert "const refreshedProviders=sync.providers_requested||[]" in script.text
+    assert "refresh:false" in script.text
     assert "const persisted=await request('/matches',{signal:controller.signal})" in script.text
     assert "request('/matches/jobs/score-batch'" in script.text
     assert "batchSize=50" in script.text
